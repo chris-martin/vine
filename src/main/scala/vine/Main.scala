@@ -10,7 +10,6 @@ import java.awt.{Toolkit, BorderLayout}
 import javax.swing.JFrame
 import com.jogamp.opengl.util.FPSAnimator
 
-import vine.LibraryPath.addToLibraryPath
 import OpenGLImplicits._
 
 object Main {
@@ -21,9 +20,7 @@ object Main {
 
 class VineApp {
 
-  addToLibraryPath("/home/chris/vine/lib/")
   GLSingleton
-  println("Herro thar")
 
   val canvas = new VineCanvas()
   val frame = new VineFrame(canvas)
@@ -51,8 +48,6 @@ class VineApp {
 }
 
 object GLSingleton {
-  println("FFFFUUUUUUUUUUUU")
-  println(sys.props.get("java.library.path"))
   val glProfile = GLProfile.getDefault
 }
 

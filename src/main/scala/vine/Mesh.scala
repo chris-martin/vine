@@ -20,13 +20,23 @@ class Mesh() {
     triangle
   }
 
+  def getTriangles:Seq[Triangle] = triangles
+
   class Triangle private[Mesh] (val corners:Array[Corner]) {
+
     def this(vertices:Array[Vertex]) {
       this(new Array[Corner](3))
       for (i <- 0 until 3) {
         corners(i) = new Corner(vertices(i), Triangle.this)
       }
     }
+
+    def vertexLocations = List(
+      corners(0).vertex.location,
+      corners(1).vertex.location,
+      corners(2).vertex.location
+    )
+
   }
 
   class Corner private[Mesh] (val vertex:Vertex, val triangle:Triangle) {

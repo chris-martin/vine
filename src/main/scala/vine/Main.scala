@@ -6,11 +6,12 @@ import awt.GLCanvas
 import fixedfunc.GLMatrixFunc
 import javax.media.opengl.glu.GLU
 
-import java.awt.{Toolkit, BorderLayout}
+import java.awt.{Stroke, Toolkit, BorderLayout}
 import javax.swing.JFrame
 import com.jogamp.opengl.util.FPSAnimator
 
 import OpenGLImplicits._
+import vine.Geometry.Vec3
 
 object Main {
   def main(args: Array[String]) {
@@ -18,11 +19,16 @@ object Main {
   }
 }
 
+object GLSingleton {
+  val glProfile = GLProfile.getDefault
+}
+
 class VineApp {
 
   GLSingleton
 
-  val canvas = new VineCanvas()
+  val mesh = Ply.parse(Ply.getClass.getResourceAsStream("bun_zipper_res2.ply"))
+  val canvas = new VineCanvas(mesh)
   val frame = new VineFrame(canvas)
   val animator = new FPSAnimator(canvas, 20)
 
@@ -43,24 +49,18 @@ class VineApp {
     frame.dispose()
   }
 
-  val mesh = Ply.parse(Ply.getClass.getResourceAsStream("bun_zipper_res4.ply"))
-
-}
-
-object GLSingleton {
-  val glProfile = GLProfile.getDefault
 }
 
 class VineCapabilities extends GLCapabilities(GLSingleton.glProfile) {
   setRedBits(8); setBlueBits(8); setGreenBits(8); setAlphaBits(8)
 }
 
-class VineCanvas extends GLCanvas(new VineCapabilities()) {
+class VineCanvas (mesh:Mesh) extends GLCanvas(new VineCapabilities()) {
   private val WIDTH = 800
   private val HEIGHT = 600
   setSize(WIDTH, HEIGHT)
   setIgnoreRepaint(true)
-  addGLEventListener(new VineRenderer(this))
+  addGLEventListener(new VineRenderer(this, mesh))
 }
 
 class VineFrame(canvas:VineCanvas) extends JFrame("Vine") {
@@ -74,22 +74,33 @@ class VineFrame(canvas:VineCanvas) extends JFrame("Vine") {
   setVisible(true)
 }
 
-class VineRenderer(canvas:VineCanvas) extends GLEventListener {
+class VineRenderer(canvas:VineCanvas, mesh:Mesh) extends GLEventListener {
 
   val glu = new GLU
 
   def display(glDrawable: GLAutoDrawable) {
-    val gl = (glDrawable getGL).getGL2
+    val gl:GL3 = (glDrawable getGL).getGL3
     gl glClear GL.GL_COLOR_BUFFER_BIT | GL.GL_DEPTH_BUFFER_BIT
 
     gl.glMatrixMode(GLMatrixFunc.GL_MODELVIEW)
     gl glLoadIdentity()
 
-    gl.glColor3f(0.9f, 0.5f, 0.2f)
     gl.glBegin(GL.GL_TRIANGLES)
-    gl.glVertex3f(-5, -5, 5)
-    gl.glVertex3f(+5, -5, 0)
-    gl.glVertex3f(0, 5, 0)
+    gl.glColor3f(0.9f, 0.5f, 0.2f)
+    for (t:mesh.Triangle <- mesh.getTriangles) {
+      for (p:Vec3 <- t.vertexLocations) {
+        gl.glVertex3f(p.x, p.y, p.z)
+      }
+    }
+    gl.glEnd()
+
+    gl.glBegin(GL.GL_LINES)
+    gl.glColor3f(1,1,1)
+    for (t:mesh.Triangle <- mesh.getTriangles) {
+      for (p:Vec3 <- t.vertexLocations) {
+        gl.glVertex3f(p.x, p.y, p.z)
+      }
+    }
     gl.glEnd()
 
     gl glFlush()
@@ -98,7 +109,7 @@ class VineRenderer(canvas:VineCanvas) extends GLEventListener {
   def dispose(p1: GLAutoDrawable) { }
 
   def init(glDrawable: GLAutoDrawable) {
-    setCamera(glDrawable, 50)
+    setCamera(glDrawable, 1)
     val gl = (glDrawable getGL).getGL2
     gl glClearColor(0, 0, 0, 0)
   }
@@ -110,7 +121,7 @@ class VineRenderer(canvas:VineCanvas) extends GLEventListener {
     gl.glLoadIdentity()
     val widthHeightRatio = canvas.getWidth / canvas.getHeight
     glu.gluPerspective(45, widthHeightRatio, 1, 1000)
-    glu.gluLookAt(0, 0, distance, 0, 0, -20, 0, 1, 0)
+    glu.gluLookAt(0, 0, distance, 0, 0, -10, 0, 1, 0)
   }
 
 }

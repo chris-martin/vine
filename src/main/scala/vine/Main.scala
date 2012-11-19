@@ -13,11 +13,17 @@ import com.jogamp.opengl.util.FPSAnimator
 import vine.LibraryPath.addToLibraryPath
 import OpenGLImplicits._
 
-object Main { def main(args: Array[String]) { new VineApp() } }
+object Main {
+  def main(args: Array[String]) {
+    new VineApp()
+  }
+}
 
 class VineApp {
 
-  addToLibraryPath("./lib/gluegen-rt.jar", "./lib/jogl-all.jar")
+  addToLibraryPath("/home/chris/vine/lib/")
+  GLSingleton
+  println("Herro thar")
 
   val canvas = new VineCanvas()
   val frame = new VineFrame(canvas)
@@ -40,13 +46,17 @@ class VineApp {
     frame.dispose()
   }
 
+  val mesh = Ply.parse(Ply.getClass.getResourceAsStream("bun_zipper_res4.ply"))
+
 }
 
-object Stuff {
+object GLSingleton {
+  println("FFFFUUUUUUUUUUUU")
+  println(sys.props.get("java.library.path"))
   val glProfile = GLProfile.getDefault
 }
 
-class VineCapabilities extends GLCapabilities(Stuff.glProfile) {
+class VineCapabilities extends GLCapabilities(GLSingleton.glProfile) {
   setRedBits(8); setBlueBits(8); setGreenBits(8); setAlphaBits(8)
 }
 
@@ -81,7 +91,7 @@ class VineRenderer(canvas:VineCanvas) extends GLEventListener {
     gl glLoadIdentity()
 
     gl.glColor3f(0.9f, 0.5f, 0.2f)
-    gl.glBegin(GL.GL_TRIANGLE_FAN)
+    gl.glBegin(GL.GL_TRIANGLES)
     gl.glVertex3f(-5, -5, 5)
     gl.glVertex3f(+5, -5, 0)
     gl.glVertex3f(0, 5, 0)

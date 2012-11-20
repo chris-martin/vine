@@ -3,6 +3,7 @@ package vine
 import vine.geometry._
 import collection.mutable.ArrayBuffer
 import scala.collection
+import collection.mutable
 
 class Mesh() {
 
@@ -27,6 +28,10 @@ class Mesh() {
     val edges = new collection.mutable.HashSet[Edge]()
     for (t <- triangles) for (e <- t.undirectedEdges) edges.add(e)
     edges
+  }
+
+  def getBfsPseudoHamiltonianCycle:Iterable[Edge] = {
+
   }
 
   def shift(offset:Vec3) {
@@ -80,11 +85,7 @@ class Mesh() {
   }
 
   class Corner private[Mesh] (val vertex:Vertex, val triangle:Triangle) {
-
-    if (vertex.corner.isEmpty) {
-      vertex.corner = Some(this)
-    }
-
+    vertex addCorner this
     def next:Corner = triangle.corners((triangle.corners.indexOf(this) + 1) % 3)
 
   }
@@ -93,7 +94,12 @@ class Mesh() {
 
   class Vertex private[Mesh] (var location:Vec3) {
     val id = nextVertexId; nextVertexId += 1
-    private[Mesh] var corner = Option.empty[Corner]
+    private val corners = new ArrayBuffer[Corner]
+    private[Mesh] def addCorner(c: Corner) { corners append c; sortCorners }
+    private def sortCorners {
+      val swing = new mutable.HashMap[Corner, Corner]
+      for (a <- corners) for (b <- corners
+    }
   }
 
   object implicits {

@@ -23,8 +23,8 @@ class Mesh() {
 
   def getTriangles:Seq[Triangle] = triangles
 
-  def getEdges:Iterable[UndirectedEdge] = {
-    val edges = new collection.mutable.HashSet[UndirectedEdge]()
+  def getEdges:Iterable[Edge] = {
+    val edges = new collection.mutable.HashSet[Edge]()
     for (t <- triangles) for (e <- t.undirectedEdges) edges.add(e)
     edges
   }
@@ -48,10 +48,18 @@ class Mesh() {
   override def toString = "Mesh(%d vertices, %d triangles, %d edges)".format(
     vertices.length, triangles.length, getEdges.size)
 
-  case class UndirectedEdge private[Mesh] (var _a: Vertex, var _b: Vertex) {
-    if (_a.id < _b.id) { var t = _a; _a = _b; _b = t }
-    def vertices = List(_a, _b)
+  trait Edge {
+    def vertices:List[Vertex]
     def locations = vertices.map(vertex => vertex.location)
+  }
+
+  case class UndirectedEdge private[Mesh] (var _a: Vertex, var _b: Vertex) extends Edge {
+    if (_a.id < _b.id) { var t = _a; _a = _b; _b = t }
+    override def vertices = List(_a, _b)
+  }
+
+  case class DirectedEdge private[Mesh] (_a: Vertex, _b: Vertex) extends Edge {
+    override def vertices = List(_a, _b)
   }
 
   class Triangle private[Mesh] (private val _corners:Array[Corner]) {

@@ -9,7 +9,7 @@ import math._
 import vine.geometry._
 
 @RunWith(classOf[JUnitRunner])
-class GeometryTest extends FunSuite {
+class geometryTest extends FunSuite {
 
   val epsilon = pow(10, -6).toFloat
 

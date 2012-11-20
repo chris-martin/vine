@@ -2,6 +2,7 @@ package vine
 
 import vine.geometry._
 import collection.mutable.ArrayBuffer
+import scala.collection
 
 class Mesh() {
 
@@ -22,6 +23,12 @@ class Mesh() {
 
   def getTriangles:Seq[Triangle] = triangles
 
+  def getEdges:Iterable[UndirectedEdge] = {
+    val edges = new collection.mutable.HashSet[UndirectedEdge]()
+    for (t <- triangles) for (e <- t.undirectedEdges) edges.add(e)
+    edges
+  }
+
   def shift(offset:Vec3) {
     for (v <- vertices) {
       v.location = v.location.add(offset)
@@ -38,31 +45,51 @@ class Mesh() {
     shift(midpoint(min, max).mult(-1))
   }
 
-  class Triangle private[Mesh] (val corners:Array[Corner]) {
+  override def toString = "Mesh(%d vertices, %d triangles, %d edges)".format(
+    vertices.length, triangles.length, getEdges.size)
+
+  case class UndirectedEdge private[Mesh] (var _a: Vertex, var _b: Vertex) {
+    if (_a.id < _b.id) { var t = _a; _a = _b; _b = t }
+    def vertices = List(_a, _b)
+    def locations = vertices.map(vertex => vertex.location)
+  }
+
+  class Triangle private[Mesh] (private val _corners:Array[Corner]) {
 
     def this(vertices:Array[Vertex]) {
       this(new Array[Corner](3))
       for (i <- 0 until 3) {
-        corners(i) = new Corner(vertices(i), Triangle.this)
+        _corners(i) = new Corner(vertices(i), Triangle.this)
       }
     }
 
-    def vertexLocations = List(
-      corners(0).vertex.location,
-      corners(1).vertex.location,
-      corners(2).vertex.location
-    )
+    def corners:List[Corner] = List.concat(_corners)
+    def vertices = corners.map(corner => corner.vertex)
+    def vertexLocations = vertices.map(vertex => vertex.location)
+    def undirectedEdges:List[UndirectedEdge] = corners.map(
+      corner => UndirectedEdge(corner.vertex, corner.next.vertex))
 
   }
 
   class Corner private[Mesh] (val vertex:Vertex, val triangle:Triangle) {
+
     if (vertex.corner.isEmpty) {
       vertex.corner = Some(this)
     }
+
+    def next:Corner = triangle.corners((triangle.corners.indexOf(this) + 1) % 3)
+
   }
 
+  var nextVertexId = 0
+
   class Vertex private[Mesh] (var location:Vec3) {
+    val id = nextVertexId; nextVertexId += 1
     private[Mesh] var corner = Option.empty[Corner]
+  }
+
+  object implicits {
+    implicit def vertexToLocation(vertex:Vertex): Vec3 = vertex.location
   }
 
 }

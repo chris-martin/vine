@@ -22,6 +22,7 @@ class App {
 
   val mesh = Ply.parse(Ply.getClass.getResourceAsStream("bun_zipper_res3.ply"))
   mesh.center()
+  println(mesh)
 
   val animator = new FPSAnimator(canvas, 20)
 
@@ -150,17 +151,12 @@ class App {
       gl glMateriali(GL_FRONT_AND_BACK, GL_SHININESS, 0)
 
       gl glBegin GL_LINES
-      for (t:mesh.Triangle <- mesh.getTriangles) {
-        for (i:List[Int] <- List(List(0,1),List(1,2),List(2,0))) {
-          var p = t.vertexLocations(i(0))
-          gl glVertex3f(p.x, p.y, p.z)
-          p = t.vertexLocations(i(1))
-          gl glVertex3f(p.x, p.y, p.z)
-        }
-      }
+      for (e:mesh.UndirectedEdge <- mesh.getEdges) for (v <- e.locations) draw(gl, v)
       gl glEnd()
 
     }
+
+    def draw(gl: GL2, v: Vec3) { gl glVertex3f(v.x, v.y, v.z) }
 
     def dispose(p1: GLAutoDrawable) { }
 

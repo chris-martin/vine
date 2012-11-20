@@ -31,7 +31,7 @@ object Ply {
     for (i <- 0 until (counts get "vertex" get)) {
       line = scanner.next()
       val tokens:Array[String] = whitespaceRegex.split(line)
-      vertices.append(mesh.addVertex(Geometry.xyz(
+      vertices.append(mesh.addVertex(geometry.xyz(
         java.lang.Float.parseFloat(tokens{0}),
         java.lang.Float.parseFloat(tokens{1}),
         java.lang.Float.parseFloat(tokens{2})

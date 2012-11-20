@@ -1,6 +1,6 @@
 package vine
 
-import vine.Geometry._
+import vine.geometry._
 import collection.mutable.ArrayBuffer
 
 class Mesh() {

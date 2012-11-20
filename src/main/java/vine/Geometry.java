@@ -1375,7 +1375,7 @@ public final class Geometry {
         }
 
         public Line3 sub(Vec3 offset) {
-            return new AtoB3(offset.sub(a), b.sub(offset), ab);
+            return new AtoB3(a.sub(offset), b.sub(offset), ab);
         }
 
         public Vec3 midpoint() {

@@ -1288,6 +1288,13 @@ public final class Geometry {
         Line3 aOrthog();
 
         /**
+         * An arbitrary line, passing through B, orthogonal to this line.
+         */
+        Line3 bOrthog();
+
+        Line3 reverse();
+
+        /**
          * Move b such that the magnitude of ab is multiplied.
          */
         Line3 mult(float factor);
@@ -1333,6 +1340,10 @@ public final class Geometry {
             return pointAndStep(a(), ab().orthog());
         }
 
+        public Line3 bOrthog() {
+            return reverse().aOrthog();
+        }
+
         public Line3 mult(float factor) {
             return pointAndStep(a(), ab().mult(factor));
         }
@@ -1376,6 +1387,10 @@ public final class Geometry {
 
         public Line3 sub(Vec3 offset) {
             return new AtoB3(a.sub(offset), b.sub(offset), ab);
+        }
+
+        public Line3 reverse() {
+            return new AtoB3(b, a, ab == null ? null : ab.mult(-1));
         }
 
         public Vec3 midpoint() {
@@ -1506,6 +1521,10 @@ public final class Geometry {
 
         public Line3 sub(Vec3 offset) {
             return new PointAndDirection3(a.sub(offset), ab);
+        }
+
+        public Line3 reverse() {
+            return new PointAndDirection3(b(), ab.mult(-1));
         }
 
         public Vec3 midpoint() {

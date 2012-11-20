@@ -1,6 +1,6 @@
 package vine
 
-import vine.Geometry.Vec3
+import vine.Geometry._
 import collection.mutable.ArrayBuffer
 
 class Mesh() {
@@ -21,6 +21,22 @@ class Mesh() {
   }
 
   def getTriangles:Seq[Triangle] = triangles
+
+  def shift(offset:Vec3) {
+    for (v <- vertices) {
+      v.location = v.location.add(offset)
+    }
+  }
+
+  def center() {
+    var min = xyz(Float.MaxValue, Float.MaxValue, Float.MaxValue)
+    var max = xyz(Float.MinValue, Float.MinValue, Float.MinValue)
+    for (v <- vertices) {
+      min = xyz(math.min(min.x, v.location.x), math.min(min.y, v.location.y), math.min(min.z, v.location.z))
+      max = xyz(math.max(max.x, v.location.x), math.max(max.y, v.location.y), math.max(max.z, v.location.z))
+    }
+    shift(midpoint(min, max).mult(-1))
+  }
 
   class Triangle private[Mesh] (val corners:Array[Corner]) {
 

@@ -42,9 +42,9 @@ object Ply {
       line = scanner.next()
       val tokens:Array[String] = whitespaceRegex.split(line)
       mesh.addTriangle(
-        vertices{Integer.parseInt(tokens{0})},
         vertices{Integer.parseInt(tokens{1})},
-        vertices{Integer.parseInt(tokens{2})}
+        vertices{Integer.parseInt(tokens{2})},
+        vertices{Integer.parseInt(tokens{3})}
       )
     }
 

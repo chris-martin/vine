@@ -9,18 +9,16 @@ package object geometry {
   private val NEG_HALFPI: Float = PI / -2
   private val THREE_HALVES_PI: Float = 1.5f * PI
 
-  private def mod2pi(a: Float): Float = {
+  private def mod2pi(a: Float): Float =
     if (a < 0) ((a % PI2) + PI2) else (a % PI2)
-  }
 
-  private def mod2pi(a: Float, flip: Boolean): Float = {
+  private def mod2pi(a: Float, flip: Boolean): Float =
     mod2pi(if (flip) a + PI else a)
-  }
 
   private def elevation(ang: Float): Float = {
     var a = ang
     var retval: Float = 0
-    
+
     if (a >= NEG_HALFPI && a <= HALFPI) retval = a
     else {
       a = mod2pi(a)
@@ -28,7 +26,7 @@ package object geometry {
       else if (a >= THREE_HALVES_PI) retval = a - PI2
       else retval = PI - a
     }
-    
+
     if (retval >= NEG_HALFPI && retval <= HALFPI) {
       retval
     } else {
@@ -36,9 +34,8 @@ package object geometry {
     }
   }
 
-  private def sign(x: Float): Int = {
+  private def sign(x: Float): Int =
     if (x == 0) 0 else (if (x < 0) -1 else 1)
-  }
 
   /**
    * A point in a Euclidean plane.
@@ -50,9 +47,7 @@ package object geometry {
     def mag: Float
     def mag(newMag: Float): Vec2 = angleVec2(ang, newMag)
 
-    /**
-     * Equivalent to mag(1).
-     */
+    /** Equivalent to mag(1). */
     def unit: Vec2 = angleVec2(ang, 1)
 
     def add(o: Vec2): Vec2 = xy(x + o.x, y + o.y)
@@ -68,39 +63,29 @@ package object geometry {
     def subX($: Float): Vec2 = xy(x - $, y)
     def subY($: Float): Vec2 = xy(x, y - $)
 
-    /**
-     * This is exactly (0, 0)?
-     */
+    /** This is exactly (0, 0)? */
     def isOrigin: Boolean = false
 
     def rot90: Vec2
     def rot180: Vec2
     def rot270: Vec2
 
-    /**
-     * Scalar (dot) product.
-     */
+    /** Scalar (dot) product. */
     def dot(o: Vec2): Float = x * o.x + y * o.y
 
-    /**
-     * U x V = U dot rot90(V).
-     */
+    /** U x V = U dot rot90(V). */
     def cross(o: Vec2): Float = dot(o.rot90)
 
-    /**
-     * Raises this 2d vector into three dimensions by adding a zero-value z value.
-     */
+    /** Raises this 2d vector into three dimensions by adding a zero-value z value. */
     def in3d: Vec3
 
-    def compareTo(o: Vec2): Int = {
-      java.lang.Float.compare(mag, o.mag)
-    }
+    def compareTo(o: Vec2): Int = java.lang.Float.compare(mag, o.mag)
 
     override def toString: String = "(%f, %f)".format(x, y)
 
   }
 
-  private[geometry] class XY (val _x: Float, val _y: Float) extends Vec2 {
+  private class XY (val _x: Float, val _y: Float) extends Vec2 {
 
     var _ang: Option[Float] = None
     var _mag: Option[Float] = None
@@ -233,33 +218,20 @@ package object geometry {
     override def toString: String = "(0, 0)"
   }
 
-  /**
-   * A directed line segment in a Euclidean plane.
-   */
+  /** A directed line segment in a Euclidean plane. */
   trait Line2 {
     def a: Vec2
-
     def b: Vec2
-
     def ab: Vec2
-
     def mag: Float
-
     def ang: Float
-
     def side(p: Vec2): Side = if (p.sub(a).cross(b.sub(a)) > 0) Left else Right
-
     def add(offset: Vec2): Line2
-
     def sub(offset: Vec2): Line2
-
     def midpoint: Vec2
-
     def bisect: Line2 = pointAndStep(midpoint, angleVec2(ang).rot90)
 
-    /**
-     * Not equal, but correlated, to "bulge" as defined by Jarek Rossignac.
-     */
+    /** Not equal, but correlated, to "bulge" as defined by Jarek Rossignac. */
     def bulge(p: Vec2): Float = {
       val c: Circle2 = circle(a, b, p)
       c.radius * side(p).i * side(c.center).i
@@ -287,36 +259,17 @@ package object geometry {
   def oTo2(p: Vec2): Line2 = new OriginLine2(p)
 
   class AtoB2 (val _a: Vec2, val _b: Vec2) extends Line2 {
-
     var _ab: Option[Vec2] = None
-
-    def this(a: Vec2, b: Vec2, ab: Option[Vec2]) {
-      this(a, b)
-      _ab = ab
-    }
-
+    def this(a: Vec2, b: Vec2, ab: Option[Vec2]) { this(a, b); _ab = ab }
     override def a = _a
     override def b = _b
-    override def ab = {
-      if (_ab.isEmpty) {
-        _ab = Some(b.sub(a))
-      }
-      _ab.get
-    }
-
+    override def ab = { if (_ab.isEmpty) { _ab = Some(b.sub(a)) }; _ab.get }
     override def ang = ab.ang
     override def mag = ab.mag
-
-    override def add(offset: Vec2) =
-      new AtoB2(offset.add(a), b.add(offset), _ab)
-
-    override def sub(offset: Vec2) =
-      new AtoB2(offset.sub(a), b.sub(offset), _ab)
-
+    override def add(offset: Vec2) = new AtoB2(offset.add(a), b.add(offset), _ab)
+    override def sub(offset: Vec2) = new AtoB2(offset.sub(a), b.sub(offset), _ab)
     override def midpoint: Vec2 = a.add(b).div(2)
-
     override def toString = "Line %s to %s".format(a, b)
-
   }
 
   def aToB(a: Vec2, b: Vec2): Line2 = new AtoB2(a, b)
@@ -486,520 +439,225 @@ package object geometry {
 
   }
 
-  private abstract class BaseVec3 extends Vec3 {
+  private class XYZ (val _x: Float, val _y: Float, val _z: Float) extends Vec3 {
 
+    var _mag: Option[Float]
+    var _magSquared: Option[Float]
+    var _elevation: Option[Float]
+    var _azimuth: Option[Float]
 
-    def asVec3: Vec3 = {
-      this
+    override def x = _x
+    override def y = _y
+    override def z = _z
+    override def mag = {
+      if (_mag.isEmpty) { mag = Some(sqrt(magSquared).toFloat) }
+      _mag.get
     }
+
+    override def magSquared = {
+      if (_magSquared.isEmpty) {
+        _magSquared = Some((pow(x, 2) + pow(y, 2) + pow(z, 2)).toFloat)
+      }
+      _magSquared.get
+    }
+
+    override def mult(f: Float) =
+      if (abs(f) < EPSILON) origin3 else xyz(f*x, f*y, f*z)
+
+    override def div(d: Float) = xyz(x/d, y/d, z/d)
+
+    override def rot90xy = xyz(-1*y, x, z)
+
+    override def elevation = {
+      if (_elevation.isEmpty) {
+        _elevation = Some(elevation(asin(z / mag).toFloat))
+      }
+      _elevation.get
+    }
+
+    override def azimuth: Float = {
+      if (_azimuth.isEmpty) {
+        _azimuth = Some(mod2pi(atan2(y, x).toFloat))
+      }
+      _azimuth.get
+    }
+
+    override def xy = xy(x, y)
+
   }
 
-  private class XYZ extends BaseVec3 {
-    private[vine] def this(x: Float, y: Float, z: Float) {
-      this()
-      this.x = x
-      this.y = y
-      this.z = z
-    }
+  def xyz(x: Float, y: Float, z: Float): Vec3 =
+    if (abs(x) < EPSILON && abs(y) < EPSILON && abs(z) < EPSILON) origin3
+    else new XYZ(x, y, z)
 
-    def x: Float = {
-      x
-    }
-
-    def y: Float = {
-      y
-    }
-
-    def z: Float = {
-      z
-    }
-
-    def mag: Float = {
-      if (!hasMag) {
-        mag = sqrt(magSquared).asInstanceOf[Float]
-        hasMag = true
-      }
-      mag
-    }
-
-    def magSquared: Float = {
-      if (!hasMagSquared) {
-        magSquared = (pow(x, 2) + pow(y, 2) + pow(z, 2)).asInstanceOf[Float]
-        hasMagSquared = true
-      }
-      magSquared
-    }
-
-    def mult(f: Float): Vec3 = {
-      if (abs(f) < EPSILON) origin3 else xyz(f * x, f * y, f * z)
-    }
-
-    def div(d: Float): Vec3 = {
-      xyz(x / d, y / d, z / d)
-    }
-
-    def rot90xy: Vec3 = {
-      xyz(-1 * y, x, z)
-    }
-
-    def elevation: Float = {
-      if (!hasElevation) {
-        elevation = elevation(asin(z / mag).asInstanceOf[Float])
-        hasElevation = true
-      }
-      elevation
-    }
-
-    def azimuth: Float = {
-      if (!hasAzimuth) {
-        azimuth = mod2pi(atan2(y, x).asInstanceOf[Float])
-        hasAzimuth = true
-      }
-      azimuth
-    }
-
-    def xy: Vec2 = {
-      xy(x, y)
-    }
-
-    private[vine] final val x: Float = .0
-    private[vine] final val y: Float = .0
-    private[vine] final val z: Float = .0
-    private[vine] var mag: Float = .0
-    private[vine] var magSquared: Float = .0
-    private[vine] var elevation: Float = .0
-    private[vine] var azimuth: Float = .0
-    private[vine] var hasMag: Boolean = false
-    private[vine] var hasMagSquared: Boolean = false
-    private[vine] var hasElevation: Boolean = false
-    private[vine] var hasAzimuth: Boolean = false
-  }
-
-  def xyz(x: Float, y: Float, z: Float): Vec3 = {
-    if (abs(x) < EPSILON && abs(y) < EPSILON && abs(z) < EPSILON) ORIGIN_3 else new XYZ(x, y, z)
-  }
-
-  def xyz(x: Number, y: Number, z: Number): Vec3 = {
+  def xyz(x: Number, y: Number, z: Number): Vec3 =
     xyz(x.floatValue, y.floatValue, z.floatValue)
+
+  def xyz(array: Array[Float]): Vec3 = xyz(array(0), array(1), array(2))
+  def xyz(array: Array[Double]): Vec3 = xyz(array(0), array(1), array(2))
+  def xyz(array: Array[Number]): Vec3 = xyz(array(0), array(1), array(2))
+
+  private object origin3 extends Vec3 {
+    override def x = 0
+    override def y = 0
+    override def z = 0
+    override def mag = 0
+    override def magSquared = 0
+    override def mult(factor: Float) = this
+    override def div(divisor: Float) = this
+    override def add(o: Vec3) = o
+    override def sub(o: Vec3) = o.mult(-1)
+    override def addX($: Float) = xyz($, 0, 0)
+    override def addY($: Float) = xyz(0, $, 0)
+    override def addZ($: Float) = xyz(0, 0, $)
+    override def subX($: Float) = xyz(-$, 0, 0)
+    override def subY($: Float) = xyz(0, -$, 0)
+    override def subZ($: Float) = xyz(0, 0, -$)
+    override def mag(newMag: Float) = this
+    override def unit = this
+    override def mult(factor: Number) = this
+    override def div(divisor: Number) = this
+    override def dot(o: Vec3) = 0
+    override def cross(o: Vec3) = this
+    override def rot90xy = this
+    override def compareTo(o: Vec3) = Float.compare(0, o.mag)
+    override def isOrigin = true
+    override def azimuth = 0
+    override def elevation = 0
+    override def azimuth(newAzimuth: Float) = this
+    override def elevation(newElevation: Float) = this
+    override def xy = origin2
+    override def orthog = this
+    override def toString = "(0, 0, 0)"
   }
 
-  def xyz(array: Array[Float]): Vec3 = {
-    xyz(array(0), array(1), array(2))
-  }
+  def distance(a: Vec2, b: Vec2): Float = a.sub(b).mag
+  def distance(a: Vec3, b: Vec3): Float = a.sub(b).mag
+  def midpoint(a: Vec2, b: Vec2): Vec2 = a.add(b).div(2)
+  def midpoint(a: Vec3, b: Vec3): Vec3 = a.add(b).div(2)
 
-  def xyz(array: Array[Double]): Vec3 = {
-    xyz(array(0), array(1), array(2))
-  }
-
-  def xyz(array: Array[Number]): Vec3 = {
-    xyz(array(0), array(1), array(2))
-  }
-
-  private class Origin3 extends Vec3 {
-    def x: Float = {
-      0
-    }
-
-    def y: Float = {
-      0
-    }
-
-    def z: Float = {
-      0
-    }
-
-    def mag: Float = {
-      0
-    }
-
-    def magSquared: Float = {
-      0
-    }
-
-    def mult(factor: Float): Vec3 = {
-      this
-    }
-
-    def div(divisor: Float): Vec3 = {
-      this
-    }
-
-    def add(o: Vec3): Vec3 = {
-      o
-    }
-
-    def sub(o: Vec3): Vec3 = {
-      o.mult(-1)
-    }
-
-    def addX($: Float): Vec3 = {
-      xyz($, 0, 0)
-    }
-
-    def addY($: Float): Vec3 = {
-      xyz(0, $, 0)
-    }
-
-    def addZ($: Float): Vec3 = {
-      xyz(0, 0, $)
-    }
-
-    def subX($: Float): Vec3 = {
-      xyz(-$, 0, 0)
-    }
-
-    def subY($: Float): Vec3 = {
-      xyz(0, -$, 0)
-    }
-
-    def subZ($: Float): Vec3 = {
-      xyz(0, 0, -$)
-    }
-
-    def mag(newMag: Float): Vec3 = {
-      this
-    }
-
-    def unit: Vec3 = {
-      this
-    }
-
-    def mult(factor: Number): Vec3 = {
-      this
-    }
-
-    def div(divisor: Number): Vec3 = {
-      this
-    }
-
-    def dot(o: Vec3): Float = {
-      0
-    }
-
-    def cross(o: Vec3): Vec3 = {
-      this
-    }
-
-    def rot90xy: Vec3 = {
-      this
-    }
-
-    def compareTo(o: Vec3): Int = {
-      Float.compare(0, o.mag)
-    }
-
-    def isOrigin: Boolean = {
-      true
-    }
-
-    def azimuth: Float = {
-      0
-    }
-
-    def elevation: Float = {
-      0
-    }
-
-    def azimuth(newAzimuth: Float): Vec3 = {
-      this
-    }
-
-    def elevation(newElevation: Float): Vec3 = {
-      this
-    }
-
-    def xy: Vec2 = {
-      origin2
-    }
-
-    def orthog: Vec3 = {
-      this
-    }
-
-    override def toString: String = {
-      "(0, 0, 0)"
-    }
-
-    def asVec3: Vec3 = {
-      this
-    }
-  }
-
-  private final val ORIGIN_3: Origin3 = new Origin3
-
-  def distance(a: Vec2, b: Vec2): Float = {
-    a.sub(b).mag
-  }
-
-  def distance(a: Vec3, b: Vec3): Float = {
-    a.sub(b).mag
-  }
-
-  def distance(a: IsVec3, b: IsVec3): Float = {
-    a.asVec3.sub(b.asVec3).mag
-  }
-
-  def midpoint(a: Vec2, b: Vec2): Vec2 = {
-    a.add(b).div(2)
-  }
-
-  def midpoint(a: Vec3, b: Vec3): Vec3 = {
-    a.add(b).div(2)
-  }
-
-  /**
-   * A directed line segment in three dimensional space.
-   */
-  abstract trait Line3 {
+  /** A directed line segment in three dimensional space. */
+  trait Line3 {
     def a: Vec3
-
     def b: Vec3
-
     def ab: Vec3
-
-    def mag: Float
-
+    def mag: Float = ab.mag
     def add(offset: Vec3): Line3
-
     def sub(offset: Vec3): Line3
-
     def midpoint: Vec3
 
-    /**
-     * Changes A without affecting B.
-     */
-    def a(a: Vec3): Line3
+    /** Changes A without affecting B. */
+    def a(a: Vec3): Line3 = aToB(a, b)
 
-    /**
-     * Changes B without affecting A.
-     */
-    def b(b: Vec3): Line3
+    /** Changes B without affecting A. */
+    def b(b: Vec3): Line3 = aToB(a, b)
 
-    /**
-     * Changes A without affecting AB.
-     */
-    def aShift(a: Vec3): Line3
+    /** Changes A without affecting AB. */
+    def aShift(a: Vec3): Line3 = pointAndStep(a, ab)
 
-    /**
-     * Changes B without affecting AB.
-     */
-    def bShift(b: Vec3): Line3
-
-    /**
-     * Changes AB without affecting A.
-     */
-    def ab(ab: Vec3): Line3
-
-    /**
-     * Elevation of AB.
-     */
-    def elevation: Float
-
-    /**
-     * Azimuth of AB.
-     */
-    def azimuth: Float
-
-    /**
-     * An arbitrary line, passing through A, orthogonal to this line.
-     */
-    def aOrthog: Line3
-
-    /**
-     * An arbitrary line, passing through B, orthogonal to this line.
-     */
-    def bOrthog: Line3
-
-    def reverse: Line3
-
-    /**
-     * Move b such that the magnitude of ab is multiplied.
-     */
-    def mult(factor: Float): Line3
-  }
-
-  private abstract class BaseLine3 extends Line3 {
-    def mag: Float = {
-      ab.mag
-    }
-
-    def a(a: Vec3): Line3 = {
-      aToB(a, b)
-    }
-
-    def b(b: Vec3): Line3 = {
-      aToB(a, b)
-    }
-
-    def aShift(a: Vec3): Line3 = {
-      pointAndStep(a, ab)
-    }
-
+    /** Changes B without affecting AB. */
     def bShift(b: Vec3): Line3 = {
       val ab: Vec3 = ab
       new AtoB3(b.sub(ab), b, ab)
     }
 
-    def ab(ab: Vec3): Line3 = {
-      pointAndStep(a, ab)
-    }
+    /** Changes AB without affecting A. */
+    def ab(ab: Vec3): Line3 = pointAndStep(a, ab)
 
-    def elevation: Float = {
-      ab.elevation
-    }
+    /** Elevation of AB. */
+    def elevation: Float = ab.elevation
 
-    def azimuth: Float = {
-      ab.azimuth
-    }
+    /** Azimuth of AB. */
+    def azimuth: Float = ab.azimuth
 
-    def aOrthog: Line3 = {
-      pointAndStep(a, ab.orthog)
-    }
+    /** An arbitrary line, passing through A, orthogonal to this line. */
+    def aOrthog: Line3 = pointAndStep(a, ab.orthog)
 
-    def bOrthog: Line3 = {
-      reverse.aOrthog
-    }
+    /** An arbitrary line, passing through B, orthogonal to this line. */
+    def bOrthog: Line3 = reverse.aOrthog
 
-    def mult(factor: Float): Line3 = {
-      pointAndStep(a, ab.mult(factor))
-    }
+    def reverse: Line3
 
-    override def toString: String = {
-      String.format("%s -> %s", a, b)
-    }
+    /** Move b such that the magnitude of ab is multiplied. */
+    def mult(factor: Float): Line3 = pointAndStep(a, ab.mult(factor))
+
+    override def toString = "%s -> %s".format(a, b)
+
   }
 
-  private class AtoB3 extends BaseLine3 {
-    private[vine] def this(a: Vec3, b: Vec3) {
-      this()
-      this.a = a
-      this.b = b
+  private class AtoB3 (val _a: Vec3, val _b: Vec3) extends Line3 {
+
+    def this(a: Vec3, b: Vec3, ab: Option[Vec3]) {
+      this(a, b)
+      _ab = ab
     }
 
-    private[vine] def this(a: Vec3, b: Vec3, ab: Vec3) {
-      this()
-      this.a = a
-      this.b = b
-      this.ab = ab
+    var _ab: Option[Vec3]
+
+    override def ab = {
+      if (_ab.isEmpty) { _ab = Some(b.sub(a)) }
+      _ab.get
     }
 
-    def a: Vec3 = {
-      a
-    }
+    override def a = _a
+    override def b = _b
+    override def add(offset: Vec3) = new AtoB3(offset.add(a), b.add(offset), _ab)
+    override def sub(offset: Vec3) = new AtoB3(a.sub(offset), b.sub(offset), _ab)
+    override def reverse = new AtoB3(b, a, if (ab == null) null else ab.mult(-1))
+    override def midpoint = a.add(b).div(2)
+    override def toString = "Line %s to %s",format(a, b)
 
-    def b: Vec3 = {
-      b
-    }
-
-    def ab: Vec3 = {
-      if (ab == null) ab = b.sub(a)
-      ab
-    }
-
-    def add(offset: Vec3): Line3 = {
-      new AtoB3(offset.add(a), b.add(offset), ab)
-    }
-
-    def sub(offset: Vec3): Line3 = {
-      new AtoB3(a.sub(offset), b.sub(offset), ab)
-    }
-
-    def reverse: Line3 = {
-      new AtoB3(b, a, if (ab == null) null else ab.mult(-1))
-    }
-
-    def midpoint: Vec3 = {
-      a.add(b).div(2)
-    }
-
-    override def toString: String = {
-      String.format("Line %s to %s", a, b)
-    }
-
-    private[vine] final val a: Vec3 = null
-    private[vine] final val b: Vec3 = null
-    private[vine] var ab: Vec3 = null
   }
 
-  def aToB(a: IsVec3, b: IsVec3): Line3 = {
-    aToB(a.asVec3, b.asVec3)
-  }
+  def aToB(a: IsVec3, b: IsVec3): Line3 = aToB(a.asVec3, b.asVec3)
+  def aToB(a: Vec3, b: Vec3): Line3 = new AtoB3(a, b)
 
-  def aToB(a: Vec3, b: Vec3): Line3 = {
-    new AtoB3(a, b)
-  }
+  private class AzimuthAndElevation (
+        val _azimuth: Float, val _elevation: Float, val _mag: Float
+      ) extends Vec3 {
 
-  private class AzimuthAndElevation extends BaseVec3 {
-    private def this(azimuth: Float, elevation: Float, mag: Float) {
-      this()
-      this.azimuth = mod2pi(azimuth, mag < 0)
-      this.elevation = elevation(elevation) * sign(mag)
-      this.mag = abs(mag)
+    def this(azimuth: Float, elevation: Float, mag: Float) {
+      this(
+        mod2pi(azimuth, mag < 0),
+        elevation(elevation) * sign(mag),
+        abs(mag)
+      )
     }
 
-    def azimuth: Float = {
-      azimuth
-    }
+    override def azimuth = _azimuth
+    override def elevation = _elevation
+    override def mag = _mag
 
-    def elevation: Float = {
-      elevation
-    }
+    var _xyz: Vec3
 
-    private[vine] def xyz: Vec3 = {
-      if (xyz == null) {
+    private def xyz: Vec3 = {
+      if (_xyz.isEmpty) {
         val cosAzimuth: Double = cos(azimuth)
         val cosElevation: Double = cos(elevation)
         val sinAzimuth: Double = sin(azimuth)
         val sinElevation: Double = sin(elevation)
-        xyz = xyz(cosElevation * cosAzimuth, cosElevation * sinAzimuth, sinElevation).mag(mag)
+        _xyz = Some(xyz(
+          cosElevation * cosAzimuth,
+          cosElevation * sinAzimuth,
+          sinElevation
+        ).mag(mag))
       }
-      xyz
+      _xyz.get
     }
 
-    def x: Float = {
-      xyz.x
-    }
-
-    def y: Float = {
-      xyz.y
-    }
-
-    def z: Float = {
-      xyz.z
-    }
-
-    def mag: Float = {
-      mag
-    }
-
-    def magSquared: Float = {
-      mag * mag
-    }
-
-    override def mag(newMag: Float): Vec3 = {
+    override def x = xyz.x
+    override def y = xyz.y
+    override def z = xyz.z
+    override def magSquared = mag * mag
+    override def mag(newMag: Float) =
       azimuthAndElevation(azimuth, elevation, newMag)
-    }
-
-    def mult(factor: Float): Vec3 = {
+    override def mult(factor: Float) =
       azimuthAndElevation(azimuth, elevation, mag * factor)
-    }
-
-    def div(divisor: Float): Vec3 = {
+    override def div(divisor: Float) =
       azimuthAndElevation(azimuth, elevation, mag / divisor)
-    }
+    override def rot90xy = xyz.rot90xy
+    override def xy = angleVec2(azimuth, mag)
 
-    def rot90xy: Vec3 = {
-      xyz.rot90xy
-    }
-
-    def xy: Vec2 = {
-      angleVec2(azimuth, mag)
-    }
-
-    private[vine] final val azimuth: Float = .0
-    private[vine] final val elevation: Float = .0
-    private[vine] final val mag: Float = .0
-    private[vine] var xyz: Vec3 = null
   }
 
   /**
@@ -1007,77 +665,40 @@ package object geometry {
    * Rotate by the azimuth angle on the XY plane.
    * Rotate toward the Z axis by the elevation angle.
    */
-  def azimuthAndElevation(azimuth: Float, elevation: Float, mag: Float): Vec3 = {
+  def azimuthAndElevation(azimuth: Float, elevation: Float, mag: Float): Vec3 =
     if (abs(mag) < EPSILON) origin3 else new AzimuthAndElevation(azimuth, elevation, mag)
+
+  private class PointAndDirection3 (val _a: Vec3, val _ab: Vec3) extends Line3 {
+    override def a: Vec3 = _a
+    override def b: Vec3 = a.add(ab)
+    override def ab: Vec3 = _ab
+    override def add(offset: Vec3) = new PointAndDirection3(a.add(offset), ab)
+    override def sub(offset: Vec3) = new PointAndDirection3(a.sub(offset), ab)
+    override def reverse = new PointAndDirection3(b, ab.mult(-1))
+    override def midpoint = a.add(ab.div(2))
   }
 
-  private class PointAndDirection3 extends BaseLine3 {
-    private def this(a: Vec3, ab: Vec3) {
-      this()
-      this.a = a
-      this.ab = ab
-    }
-
-    def a: Vec3 = {
-      a
-    }
-
-    def b: Vec3 = {
-      a.add(ab)
-    }
-
-    def ab: Vec3 = {
-      ab
-    }
-
-    def add(offset: Vec3): Line3 = {
-      new PointAndDirection3(a.add(offset), ab)
-    }
-
-    def sub(offset: Vec3): Line3 = {
-      new PointAndDirection3(a.sub(offset), ab)
-    }
-
-    def reverse: Line3 = {
-      new PointAndDirection3(b, ab.mult(-1))
-    }
-
-    def midpoint: Vec3 = {
-      a.add(ab.div(2))
-    }
-
-    private[vine] final val a: Vec3 = null
-    private[vine] final val ab: Vec3 = null
-  }
-
-  def pointAndStep(a: Vec3, ab: Vec3): Line3 = {
+  def pointAndStep(a: Vec3, ab: Vec3): Line3 =
     new PointAndDirection3(a, ab)
-  }
 
-  def pointAndStep(a: IsVec3, ab: IsVec3): Line3 = {
+  def pointAndStep(a: IsVec3, ab: IsVec3): Line3 =
     new PointAndDirection3(a.asVec3, ab.asVec3)
-  }
 
-  def oTo3(b: Vec3): Line3 = {
-    aToB(origin3, b)
-  }
-
-  def distance(line: Line3, c: IsVec3): Float = {
-    distance(line, c.asVec3)
-  }
+  def oTo3(b: Vec3): Line3 = aToB(origin3, b)
 
   def distance(line: Line3, c: Vec3): Float = {
-    val a: Vec3 = line.a
-    val b: Vec3 = line.b
-    val ac: Vec3 = aToB(a, c).ab
-    val bc: Vec3 = aToB(b, c).ab
-    val ab: Vec3 = line.ab
+    val a = line.a
+    val b = line.b
+    val ac = aToB(a, c).ab
+    val bc = aToB(b, c).ab
+    val ab = line.ab
     ac.cross(bc).mag / ab.mag
   }
 
-  private def matrixApply(m: Array[Array[Float]], x: Vec3): Vec3 = {
-    xyz(m(0)(0) * x.x + m(0)(1) * x.y + m(0)(2) * x.z, m(1)(0) * x.x + m(1)(1) * x.y + m(1)(2) * x.z, m(2)(0) * x.x + m(2)(1) * x.y + m(2)(2) * x.z)
-  }
+  private def matrixApply(m: Array[Array[Float]], x: Vec3): Vec3 = xyz(
+    m(0)(0) * x.x + m(0)(1) * x.y + m(0)(2) * x.z,
+    m(1)(0) * x.x + m(1)(1) * x.y + m(1)(2) * x.z,
+    m(2)(0) * x.x + m(2)(1) * x.y + m(2)(2) * x.z)
 
   private def rotationMatrix(axis: Vec3, angle: Float): Array[Array[Float]] = {
     val u: Vec3 = axis.unit
@@ -1086,12 +707,28 @@ package object geometry {
     val uz: Float = u.z
     val cosa: Float = cos(angle).asInstanceOf[Float]
     val sina: Float = sin(angle).asInstanceOf[Float]
-    Array[Array[Float]](Array(cosa + ux * ux * (1 - cosa), ux * uy * (1 - cosa) - uz * sina, ux * uz * (1 - cosa) + uy * sina), Array(uy * ux * (1 - cosa) + uz * sina, cosa + uy * uy * (1 - cosa), uy * uz * (1 - cosa) - ux * sina), Array(uz * ux * (1 - cosa) - uy * sina, uz * uy * (1 - cosa) + ux * sina, cosa + uz * uz * (1 - cosa)))
+
+    Array[Array[Float]](
+      Array(
+        cosa + ux * ux * (1 - cosa),
+        ux * uy * (1 - cosa) - uz * sina,
+        ux * uz * (1 - cosa) + uy * sina
+      ),
+      Array(
+        uy * ux * (1 - cosa) + uz * sina,
+        cosa + uy * uy * (1 - cosa),
+        uy * uz * (1 - cosa) - ux * sina
+      ),
+      Array(
+        uz * ux * (1 - cosa) - uy * sina,
+        uz * uy * (1 - cosa) + ux * sina,
+        cosa + uz * uz * (1 - cosa)
+      )
+    )
   }
 
-  def rotatePointAroundLine(line: Line3, c: IsVec3, angle: Float): Vec3 = {
+  def rotatePointAroundLine(line: Line3, c: IsVec3, angle: Float): Vec3 =
     rotatePointAroundLine(line, c.asVec3, angle)
-  }
 
   def rotatePointAroundLine(line: Line3, c: Vec3, angle: Float): Vec3 = {
     val matrix: Array[Array[Float]] = rotationMatrix(line.ab, angle)
@@ -1101,40 +738,20 @@ package object geometry {
     c
   }
 
-  abstract trait Sphere {
+  trait Sphere {
     def center: Vec3
-
     def radius: Float
   }
 
-  private class SimpleSphere extends Sphere {
-    private def this(center: Vec3, radius: Float) {
-      this()
-      this.center = center
-      this.radius = radius
-    }
-
-    def center: Vec3 = {
-      center
-    }
-
-    def radius: Float = {
-      radius
-    }
-
-    private[vine] final val center: Vec3 = null
-    private[vine] final val radius: Float = .0
+  private class SimpleSphere (val _center: Vec3, val _radius: Float) extends Sphere {
+    override def center = _center
+    override def radius = _radius
   }
 
-  def sphere(center: Vec3, radius: Float): Sphere = {
+  def sphere(center: Vec3, radius: Float): Sphere =
     new SimpleSphere(center, radius)
-  }
 
-  def sphere(center: IsVec3, radius: Float): Sphere = {
-    sphere(center.asVec3, radius)
-  }
-
-  abstract trait Circle3 {
+  trait Circle3 {
     def center: Vec3
 
     /** A vector orthogonal to the plane on which the circle lies. */
@@ -1145,51 +762,27 @@ package object geometry {
     /** This sphere's intersection with the XY plane. 0 or 1 circles. */
     def intersectXY: List[Circle2]
 
-    /** This sphere's intersection with the origin-intersectingplane normal to the vector. 0 or 1 circles. */
-    def intersectPlane(normal: Vec3): List[Circle3]
   }
 
-  class SimpleCircle3 extends Circle3 {
-    def this(center: Vec3, normal: Vec3, radius: Float) {
-      this()
-      this.center = center
-      this.normal = normal
-      this.radius = radius
-    }
+  class SimpleCircle3 (
+        val _center: Vec3, val _normal: Vec3, val _radius: Float
+      ) extends Circle3 {
 
-    def center: Vec3 = {
-      center
-    }
+    override def center = _center
+    override def normal = _normal
+    override def radius = _radius
 
-    def normal: Vec3 = {
-      normal
-    }
-
-    def radius: Float = {
-      radius
-    }
-
-    def intersectXY: List[Circle2] = {
+    override def intersectXY = {
       val r: Float = radius
       val d: Float = center.z
-      if (d > r) {
-        return asList(Array[Circle2])
-      }
-      asList(circle(center.xy, r * r - d * d))
+      if (d > r) asList(Array[Circle2])
+      else asList(circle(center.xy, r * r - d * d))
     }
 
-    def intersectPlane(normal: Vec3): List[Circle3] = {
-      null
-    }
-
-    private[vine] final val center: Vec3 = null
-    private[vine] final val normal: Vec3 = null
-    private[vine] final val radius: Float = .0
   }
 
-  def circle(center: Vec3, normal: Vec3, radius: Float): Circle3 = {
+  def circle(center: Vec3, normal: Vec3, radius: Float): Circle3 =
     new SimpleCircle3(center, normal, radius)
-  }
 
   /** 0 or 1 circles. */
   def intersect(a: Sphere, b: Sphere): List[Circle3] = {
@@ -1202,7 +795,9 @@ package object geometry {
     val d: Float = ab.mag
     val x: Float = (d * d - r * r + R * R) / (2 * d)
     val center: Vec3 = ab.a.add(ab.ab.mag(x))
-    val rad: Float = sqrt((r - d - R) * (R - d - r) * (r - d + R) * (d + r + R)).asInstanceOf[Float] / (2 * d)
+    val rad: Float = sqrt(
+      (r - d - R) * (R - d - r) * (r - d + R) * (d + r + R)
+    ).toFloat / (2 * d)
     asList(circle(center, ab.ab, rad))
   }
 
@@ -1211,7 +806,6 @@ package object geometry {
     xyz(Float.parseFloat(ss(0)), Float.parseFloat(ss(1)), Float.parseFloat(ss(2)))
   }
 
-  def formatXYZ(v: Vec3): String = {
-    String.format("%f,%f,%f", v.x, v.y, v.z)
-  }
+  def formatXYZ(v: Vec3): String = "%f,%f,%f".format(v.x, v.y, v.z)
+
 }

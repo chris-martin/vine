@@ -6,7 +6,7 @@ class App {
   import glu._
 
   val mesh = Ply.parse(Ply.getClass.getResourceAsStream("bun_zipper_res3.ply"))
-  mesh.center()
+  mesh.translateCenterToOrigin()
   println(mesh)
 
   val animator = new com.jogamp.opengl.util.FPSAnimator(canvas, 20)
@@ -138,7 +138,7 @@ class App {
       glMateriali(GL_FRONT_AND_BACK, GL_SHININESS, 4)
 
       glBegin(GL_TRIANGLES)
-      for (t <- mesh.getTriangles) for (p <- t.vertexLocations) glVertex3f(p.x, p.y, p.z)
+      for (t <- mesh.triangles) for (p <- t.vertexLocations) glVertex3f(p.x, p.y, p.z)
       glEnd()
     }
 
@@ -154,7 +154,7 @@ class App {
       glMateriali(GL_FRONT_AND_BACK, GL_SHININESS, 0)
 
       glBegin(GL_LINES)
-      for (e <- mesh.getEdges) for (v <- e.locations) draw(gl, v)
+      for (e <- mesh.edges) for (v <- e.locations) draw(gl, v)
       glEnd()
     }
 

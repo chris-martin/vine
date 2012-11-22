@@ -370,19 +370,19 @@ object geometry {
     def z: Float
     def mag: Float
     def magSquared: Float
-    def mag(newMag: Float): Vec3 = unit.mult(newMag)
+    def mag(newMag: Float): Vec3 = unit.*(newMag)
 
     /**
      * Equivalent to mag(1).
      */
-    def unit: Vec3 = div(mag)
+    def unit: Vec3 = /(mag)
 
-    def add(o: Vec3): Vec3 = xyz(x + o.x, y + o.y, z + o.z)
-    def sub(o: Vec3): Vec3 = xyz(x - o.x, y - o.y, z - o.z)
-    def mult(factor: Float): Vec3
-    def mult(factor: Number): Vec3 = mult(factor.floatValue)
-    def div(divisor: Float): Vec3
-    def div(divisor: Number): Vec3 = div(divisor.floatValue)
+    def +(o: Vec3): Vec3 = xyz(x + o.x, y + o.y, z + o.z)
+    def -(o: Vec3): Vec3 = xyz(x - o.x, y - o.y, z - o.z)
+    def *(factor: Float): Vec3
+    def *(factor: Number): Vec3 = *(factor.floatValue)
+    def /(divisor: Float): Vec3
+    def /(divisor: Number): Vec3 = /(divisor.floatValue)
     def addX($: Float): Vec3 = xyz(x + $, y, z)
     def addY($: Float): Vec3 = xyz(x, y + $, z)
     def addZ($: Float): Vec3 = xyz(x, y, z + $)
@@ -451,10 +451,10 @@ object geometry {
       _magSquared.get
     }
 
-    override def mult(f: Float) =
+    override def *(f: Float) =
       if (abs(f) < EPSILON) origin3 else xyz(f*x, f*y, f*z)
 
-    override def div(d: Float) = xyz(x/d, y/d, z/d)
+    override def /(d: Float) = xyz(x/d, y/d, z/d)
 
     override def rot90xy = xyz(-1*y, x, z)
 
@@ -492,10 +492,10 @@ object geometry {
     override def z = 0
     override def mag = 0
     override def magSquared = 0
-    override def mult(factor: Float) = this
-    override def div(divisor: Float) = this
-    override def add(o: Vec3) = o
-    override def sub(o: Vec3) = o.mult(-1)
+    override def *(factor: Float) = this
+    override def /(divisor: Float) = this
+    override def +(o: Vec3) = o
+    override def -(o: Vec3) = o.*(-1)
     override def addX($: Float) = xyz($, 0, 0)
     override def addY($: Float) = xyz(0, $, 0)
     override def addZ($: Float) = xyz(0, 0, $)
@@ -504,8 +504,8 @@ object geometry {
     override def subZ($: Float) = xyz(0, 0, -$)
     override def mag(newMag: Float) = this
     override def unit = this
-    override def mult(factor: Number) = this
-    override def div(divisor: Number) = this
+    override def *(factor: Number) = this
+    override def /(divisor: Number) = this
     override def dot(o: Vec3) = 0
     override def cross(o: Vec3) = this
     override def rot90xy = this
@@ -521,9 +521,9 @@ object geometry {
   }
 
   def distance(a: Vec2, b: Vec2): Float = a.-(b).mag
-  def distance(a: Vec3, b: Vec3): Float = a.sub(b).mag
+  def distance(a: Vec3, b: Vec3): Float = a.-(b).mag
   def midpoint(a: Vec2, b: Vec2): Vec2 = a.+(b)./(2)
-  def midpoint(a: Vec3, b: Vec3): Vec3 = a.add(b).div(2)
+  def midpoint(a: Vec3, b: Vec3): Vec3 = a.+(b)./(2)
 
   /** A directed line segment in three dimensional space. */
   trait Line3 {
@@ -545,7 +545,7 @@ object geometry {
     def aShift(a: Vec3): Line3 = pointAndStep(a, ab)
 
     /** Changes B without affecting AB. */
-    def bShift(b: Vec3): Line3 = new AtoB3(b.sub(ab), b, Some(ab))
+    def bShift(b: Vec3): Line3 = new AtoB3(b.-(ab), b, Some(ab))
 
     /** Changes AB without affecting A. */
     def ab(ab: Vec3): Line3 = pointAndStep(a, ab)
@@ -565,7 +565,7 @@ object geometry {
     def reverse: Line3
 
     /** Move b such that the magnitude of ab is multiplied. */
-    def mult(factor: Float): Line3 = pointAndStep(a, ab.mult(factor))
+    def mult(factor: Float): Line3 = pointAndStep(a, ab.*(factor))
 
     override def toString = "%s -> %s".format(a, b)
 
@@ -581,16 +581,16 @@ object geometry {
     var _ab: Option[Vec3] = None
 
     override def ab = {
-      if (_ab.isEmpty) { _ab = Some(b.sub(a)) }
+      if (_ab.isEmpty) { _ab = Some(b.-(a)) }
       _ab.get
     }
 
     override def a = _a
     override def b = _b
-    override def +(offset: Vec3) = new AtoB3(offset.add(a), b.add(offset), _ab)
-    override def -(offset: Vec3) = new AtoB3(a.sub(offset), b.sub(offset), _ab)
-    override def reverse = new AtoB3(b, a, _ab.map($ => $.mult(-1)))
-    override def midpoint = a.add(b).div(2)
+    override def +(offset: Vec3) = new AtoB3(offset.+(a), b.+(offset), _ab)
+    override def -(offset: Vec3) = new AtoB3(a.-(offset), b.-(offset), _ab)
+    override def reverse = new AtoB3(b, a, _ab.map($ => $.*(-1)))
+    override def midpoint = a.+(b)./(2)
     override def toString = "Line %s to %s".format(a, b)
 
   }
@@ -628,9 +628,9 @@ object geometry {
     override def magSquared = mag * mag
     override def mag(newMag: Float) =
       azimuthAndElevation(azimuth, elevation, newMag)
-    override def mult(factor: Float) =
+    override def *(factor: Float) =
       azimuthAndElevation(azimuth, elevation, mag * factor)
-    override def div(divisor: Float) =
+    override def /(divisor: Float) =
       azimuthAndElevation(azimuth, elevation, mag / divisor)
     override def rot90xy = xyz.rot90xy
     override def xy = angleVec2(azimuth, mag)
@@ -652,12 +652,12 @@ object geometry {
 
   private class PointAndDirection3 (val _a: Vec3, val _ab: Vec3) extends Line3 {
     override def a: Vec3 = _a
-    override def b: Vec3 = a.add(ab)
+    override def b: Vec3 = a.+(ab)
     override def ab: Vec3 = _ab
-    override def +(offset: Vec3) = new PointAndDirection3(a.add(offset), ab)
-    override def -(offset: Vec3) = new PointAndDirection3(a.sub(offset), ab)
-    override def reverse = new PointAndDirection3(b, ab.mult(-1))
-    override def midpoint = a.add(ab.div(2))
+    override def +(offset: Vec3) = new PointAndDirection3(a.+(offset), ab)
+    override def -(offset: Vec3) = new PointAndDirection3(a.-(offset), ab)
+    override def reverse = new PointAndDirection3(b, ab.*(-1))
+    override def midpoint = a.+(ab./(2))
   }
 
   def pointAndStep(a: Vec3, ab: Vec3): Line3 =
@@ -709,9 +709,9 @@ object geometry {
   def rotatePointAroundLine(line: Line3, c$: Vec3, angle: Float): Vec3 = {
     val matrix = rotationMatrix(line.ab, angle)
     var c = c$
-    c = c.sub(line.a)
+    c = c.-(line.a)
     c = matrixApply(matrix, c)
-    c = c.add(line.a)
+    c = c.+(line.a)
     c
   }
 
@@ -771,7 +771,7 @@ object geometry {
     val ab: Line3 = aToB(a.center, b.center)
     val d: Float = ab.mag
     val x: Float = (d * d - r * r + R * R) / (2 * d)
-    val center: Vec3 = ab.a.add(ab.ab.mag(x))
+    val center: Vec3 = ab.a.+(ab.ab.mag(x))
     val rad: Float = sqrt(
       (r - d - R) * (R - d - r) * (r - d + R) * (d + r + R)
     ).toFloat / (2 * d)

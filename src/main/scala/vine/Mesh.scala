@@ -5,14 +5,14 @@ import collection.mutable.ArrayBuffer
 
 class Mesh() {
 
-  private val vertices = new ArrayBuffer[Vertex]
-  private val triangles = new ArrayBuffer[Triangle]()
+  private val _vertices = new ArrayBuffer[Vertex]
+  private val _triangles = new ArrayBuffer[Triangle]()
 
-  def getTriangles: Seq[Triangle] = triangles
+  def triangles: Seq[Triangle] = _triangles
 
-  def getEdges: Iterable[Edge] = {
+  def edges: Iterable[Edge] = {
     val edges = new collection.mutable.HashSet[Edge]()
-    for (t <- triangles) for (e <- t.undirectedEdges) edges.add(e)
+    for (t <- _triangles) for (e <- t.undirectedEdges) edges.add(e)
     edges
   }
   /*
@@ -31,24 +31,22 @@ class Mesh() {
 
   }*/
 
-  def shift(offset: Vec3) {
-    for (v <- vertices) {
-      v.location = v.location.add(offset)
-    }
-  }
+  def shift(offset: Vec3) { for (v <- _vertices) v.location = v.location.+(offset) }
 
-  def center() {
+  def translateCenterToOrigin() { shift(center * -1) }
+
+  def center = {
     var min = xyz(Float.MaxValue, Float.MaxValue, Float.MaxValue)
     var max = xyz(Float.MinValue, Float.MinValue, Float.MinValue)
-    for (v <- vertices) {
+    for (v <- _vertices) {
       min = xyz(math.min(min.x, v.location.x), math.min(min.y, v.location.y), math.min(min.z, v.location.z))
       max = xyz(math.max(max.x, v.location.x), math.max(max.y, v.location.y), math.max(max.z, v.location.z))
     }
-    shift(midpoint(min, max).mult(-1))
+    midpoint(min, max)
   }
 
   override def toString = "Mesh(%d vertices, %d triangles, %d edges)".format(
-    vertices.length, triangles.length, getEdges.size)
+    _vertices.length, _triangles.length, edges.size)
 
   trait Edge {
 
@@ -97,7 +95,7 @@ class Mesh() {
 
     private var component = new Component(1)
 
-    triangles.append(this)
+    _triangles.append(this)
 
     def this(vertices:Seq[Vertex]) {
       this(new Array[Corner](3))
@@ -146,7 +144,7 @@ class Mesh() {
 
     val id = Vertex.idGenerator.next()
 
-    vertices.append(this)
+    _vertices.append(this)
 
     private var _corners:List[Corner] = List()
     def corners:List[Corner] = _corners

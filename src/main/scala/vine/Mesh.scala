@@ -1,31 +1,38 @@
 package vine
 
 import vine.geometry.geometry3._
-import collection.mutable.ArrayBuffer
+import collection.mutable.{ArrayBuffer,HashSet}
 
 class Mesh() {
 
   private val _vertices = new ArrayBuffer[Vertex]
   private val _triangles = new ArrayBuffer[Triangle]()
 
+  /** All triangles */
   def triangles: Seq[Triangle] = _triangles
 
-  def edges: Iterable[Edge] = {
+  /** All edges */
+  def edges: Seq[Edge] = {
     val edges = new collection.mutable.HashSet[Edge]()
     for (t <- _triangles) for (e <- t.undirectedEdges) edges.add(e)
-    edges
+    edges.toSeq
   }
-  /*
-  def findTriangles(e: UndirectedEdge): List[Triangle] = {
-    var found = List()
+
+  /** Finds any triangles that contain edge e. */
+  def findTriangles(e: Edge): Seq[Triangle] = {
+    val found = HashSet[Triangle]()
     for (v <- e.vertices) {
       for (c <- v.corners) {
-        val matchedEdge = c.triangle.directedEdge(e)
-
+        val t = c.triangle
+        val matchedEdge = t.directedEdge(e)
+        if (matchedEdge.isDefined) {
+          found add t
+        }
       }
     }
-    found
-  }*/
+    found.toSeq
+  }
+
   /*
   def getBfsPseudoHamiltonianCycle: Iterable[Edge] = {
 
@@ -95,21 +102,47 @@ class Mesh() {
 
     private var component = new Component(1)
 
-    _triangles.append(this)
-
     def this(vertices:Seq[Vertex]) {
+
       this(new Array[Corner](3))
+
       for (i <- 0 until 3) {
         _corners(i) = new Corner(vertices(i), Triangle.this)
       }
-      /*for (e <- undirectedEdges) {
-        for (adjacentTriangle <- findTriangles(e)) {
-          val de = adjacentTriangle.directedEdge(e)
+
+      for (myEdge:DirectedEdge <- directedEdges) {
+        for (adjacentTriangle <- findTriangles(myEdge)) {
+          val yourEdge:DirectedEdge = adjacentTriangle.directedEdge(myEdge).get
+          if (myEdge == yourEdge) {
+            // todo - reverse() one of the components
+          }
+          {
+            val v = myEdge.vertices(0)
+            val myCorner = cornerAtVertex(v).get
+            val yourCorner = adjacentTriangle.cornerAtVertex(v).get
+            myCorner.swing = yourCorner
+          }
+          {
+            val v = myEdge.vertices(0)
+            val myCorner = cornerAtVertex(v).get
+            val yourCorner = adjacentTriangle.cornerAtVertex(v).get
+            yourCorner.swing = myCorner
+          }
         }
-      }*/
+      }
+
+      _triangles.append(this)
     }
 
-    def corners:List[Corner] = List.concat(_corners)
+    def reverse() {
+      val t = _corners(0)
+      _corners(0) = _corners(1)
+      _corners(1) = t
+    }
+
+    def corners: List[Corner] = List.concat(_corners)
+
+    def cornerAtVertex(v: Vertex): Option[Corner] = corners.find(c => c.vertex == v)
 
     def vertices = corners.map(corner => corner.vertex)
 

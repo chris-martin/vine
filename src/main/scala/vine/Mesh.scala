@@ -2,24 +2,11 @@ package vine
 
 import vine.geometry._
 import collection.mutable.ArrayBuffer
-import scala.collection
 
 class Mesh() {
 
   private val vertices = new ArrayBuffer[Vertex]
   private val triangles = new ArrayBuffer[Triangle]()
-
-  def addVertex(location: Vec3): Vertex = {
-    val vertex = new Vertex(location)
-    vertices.append(vertex)
-    vertex
-  }
-
-  def addTriangle(x: Vertex, y: Vertex, z: Vertex): Triangle = {
-    val triangle = new Triangle(Array(x, y, z))
-    triangles.append(triangle)
-    triangle
-  }
 
   def getTriangles: Seq[Triangle] = triangles
 
@@ -98,9 +85,21 @@ class Mesh() {
 
   }
 
-  class Triangle private[Mesh] (private val _corners:Array[Corner]) {
+  private object Component {
+    private val idGenerator:Iterator[Int] = (1 until Int.MaxValue).iterator
+  }
 
-    def this(vertices:Array[Vertex]) {
+  private class Component (var size:Int) {
+    val id = Component.idGenerator.next()
+  }
+
+  class Triangle (private val _corners:Array[Corner]) {
+
+    private var component = new Component(1)
+
+    triangles.append(this)
+
+    def this(vertices:Seq[Vertex]) {
       this(new Array[Corner](3))
       for (i <- 0 until 3) {
         _corners(i) = new Corner(vertices(i), Triangle.this)
@@ -140,13 +139,14 @@ class Mesh() {
   }
 
   object Vertex {
-    private var nextVertexId = 0
+    val idGenerator:Iterator[Int] = (1 until Int.MaxValue).iterator
   }
 
-  class Vertex private[Mesh] (var location:Vec3) {
+  class Vertex (var location:Vec3) {
 
-    val id = Vertex.nextVertexId
-    Vertex.nextVertexId += 1
+    val id = Vertex.idGenerator.next()
+
+    vertices.append(this)
 
     private var _corners:List[Corner] = List()
     def corners:List[Corner] = _corners
@@ -154,8 +154,6 @@ class Mesh() {
 
   }
 
-  object implicits {
-    implicit def vertexToLocation(vertex:Vertex): Vec3 = vertex.location
-  }
+  implicit def vertexToLocation(vertex:Vertex): Vec3 = vertex.location
 
 }

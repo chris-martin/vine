@@ -1,51 +1,36 @@
 package vine
 
-import java.io.InputStream
-import java.util.Scanner
-import util.matching.Regex
-import util.Properties.lineSeparator
-import collection.mutable.ArrayBuffer
-
 object Ply {
 
-  val elementRegex = new Regex("""element (\S+) ([-\.\d]+)""", "element", "count")
+  private val elementRegex = new util.matching.Regex(
+    """element (\S+) ([-\.\d]+)""", "element", "count")
+  private val whitespaceRegex = """[ \t]+""".r
 
-  val whitespaceRegex = """[ \t]+""".r
+  def parse(in: java.io.InputStream): Mesh = {
 
-  def parse(in:InputStream):Mesh = {
-    val scanner = new Scanner(in)
-    scanner.useDelimiter(lineSeparator)
+    val scanner = new java.util.Scanner(in)
+    scanner useDelimiter(util.Properties.lineSeparator)
     var line = ""
-    val counts = new collection.mutable.HashMap[String, Int]()
+    val counts = new collection.mutable.HashMap[String, Int]
     do {
-      line = scanner.next()
+      line = scanner next()
       elementRegex findFirstIn line match {
-        case Some(elementRegex(element, count)) => counts.put(element, Integer.parseInt(count))
+        case Some(elementRegex(element, count)) => counts put(element, count.toInt)
         case None => { }
       }
-    } while (!line.equals("end_header"))
+    } while (!(line equals "end_header"))
 
     val mesh = new Mesh()
 
-    val vertices = ArrayBuffer[mesh.Vertex]()
+    def nextSplitLine() = whitespaceRegex split(scanner next())
+
+    val vertices = collection.mutable.ArrayBuffer[mesh.Vertex]()
     for (i <- 0 until (counts get "vertex" get)) {
-      line = scanner.next()
-      val tokens:Array[String] = whitespaceRegex.split(line)
-      vertices.append(mesh.addVertex(geometry.xyz(
-        java.lang.Float.parseFloat(tokens{0}),
-        java.lang.Float.parseFloat(tokens{1}),
-        java.lang.Float.parseFloat(tokens{2})
-      )))
+      vertices append new mesh.Vertex( nextSplitLine() slice(0, 3) map { x => x.toFloat } )
     }
 
     for (i <- 0 until (counts get "face" get)) {
-      line = scanner.next()
-      val tokens:Array[String] = whitespaceRegex.split(line)
-      mesh.addTriangle(
-        vertices{Integer.parseInt(tokens{1})},
-        vertices{Integer.parseInt(tokens{2})},
-        vertices{Integer.parseInt(tokens{3})}
-      )
+      new mesh.Triangle( nextSplitLine() slice(1, 4) map { x => vertices(x.toInt) } )
     }
 
     mesh

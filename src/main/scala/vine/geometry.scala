@@ -483,9 +483,8 @@ object geometry {
   def xyz(x: Number, y: Number, z: Number): Vec3 =
     xyz(x.floatValue, y.floatValue, z.floatValue)
 
-  def xyz(array: Array[Float]): Vec3 = xyz(array(0), array(1), array(2))
-  def xyz(array: Array[Double]): Vec3 = xyz(array(0), array(1), array(2))
-  def xyz(array: Array[Number]): Vec3 = xyz(array(0), array(1), array(2))
+  implicit def xyz(seq: Seq[Float]): Vec3 = geometry.xyz(seq(0), seq(1), seq(2))
+  implicit def xyz(array: Array[Float]): Vec3 = xyz(array toSeq)
 
   object origin3 extends Vec3 {
     override def x = 0

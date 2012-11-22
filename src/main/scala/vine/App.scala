@@ -1,33 +1,20 @@
 package vine
 
-import javax.media.opengl.glu.GLU
-import com.jogamp.opengl.util.FPSAnimator
-import java.awt.event._
-import vine.geometry._
-import javax.media.opengl._
-import fixedfunc.GLMatrixFunc._
-import javax.media.opengl.awt.GLCanvas
-import javax.swing.JFrame
-import java.awt.{Toolkit, BorderLayout}
-import javax.media.opengl.GL._
-import javax.media.opengl.fixedfunc.GLLightingFunc._
-import javax.media.opengl.GL2._
-import scala.Some
-import vine.OpenGLImplicits._
-import vine.color.implicits._
-
 class App {
 
-  val glu = new GLU
+  val glu = new javax.media.opengl.glu.GLU
   import glu._
 
   val mesh = Ply.parse(Ply.getClass.getResourceAsStream("bun_zipper_res3.ply"))
   mesh.center()
   println(mesh)
 
-  val animator = new FPSAnimator(canvas, 20)
+  val animator = new com.jogamp.opengl.util.FPSAnimator(canvas, 20)
 
-  object keyListener extends KeyAdapter {
+  object keyListener extends java.awt.event.KeyAdapter {
+
+    import java.awt.event.KeyEvent
+
     override def keyReleased(e: KeyEvent) {
       val step = camera.view.ab.mag(3)
       e.getKeyCode match {
@@ -39,7 +26,10 @@ class App {
     }
   }
 
-  object mouseListener extends MouseAdapter {
+  object mouseListener extends java.awt.event.MouseAdapter {
+
+    import vine.geometry._
+    import java.awt.event.MouseEvent
 
     var previous:Option[Vec2] = None
 
@@ -71,7 +61,10 @@ class App {
 
   }
 
-  frame.addWindowListener(new WindowAdapter {
+  frame.addWindowListener(new java.awt.event.WindowAdapter {
+
+    import java.awt.event.WindowEvent
+
     override def windowClosing(e: WindowEvent) { stop() }
   })
 
@@ -82,14 +75,17 @@ class App {
     frame.dispose()
   }
 
-  object capabilities extends GLCapabilities(GLProfileSingleton.glProfile) {
-    setRedBits(8); setBlueBits(8); setGreenBits(8); setAlphaBits(8)
+  object capabilities extends javax.media.opengl.GLCapabilities(vine.opengl.glProfile) {
+
+    setRedBits(8)
+    setBlueBits(8)
+    setGreenBits(8)
+    setAlphaBits(8)
   }
 
-  object canvas extends GLCanvas(capabilities) {
-    private val WIDTH = 1000
-    private val HEIGHT = 800
-    setSize(WIDTH, HEIGHT)
+  object canvas extends javax.media.opengl.awt.GLCanvas(capabilities) {
+
+    setSize(1000, 800)
     setIgnoreRepaint(true)
     addGLEventListener(renderer)
     addMouseListener(mouseListener)
@@ -97,7 +93,10 @@ class App {
     addKeyListener(keyListener)
   }
 
-  object frame extends JFrame("Vine") {
+  object frame extends javax.swing.JFrame("Vine") {
+
+    import java.awt.{BorderLayout,Toolkit}
+
     getContentPane setLayout new BorderLayout
     getContentPane add(canvas, BorderLayout.CENTER)
 
@@ -111,9 +110,14 @@ class App {
   val faceColor = color("#e73")
   val wireColor = color("#3332")
 
-  object renderer extends GLEventListener {
+  object renderer extends javax.media.opengl.GLEventListener {
+
+    import vine.color._, vine.opengl._, vine.geometry._
+    import javax.media.opengl, opengl._, opengl.GL._, opengl.GL2._
+    import opengl.fixedfunc, fixedfunc.GLLightingFunc._, fixedfunc.GLMatrixFunc._
 
     def display(glDrawable: GLAutoDrawable) {
+
       val gl:GL2 = (glDrawable getGL).getGL2
       camera set glDrawable
       gl glClear GL_COLOR_BUFFER_BIT
@@ -123,6 +127,7 @@ class App {
     }
 
     def faces(gl:GL2) {
+
       import gl._
 
       glMatrixMode(GL_MODELVIEW)
@@ -133,16 +138,12 @@ class App {
       glMateriali(GL_FRONT_AND_BACK, GL_SHININESS, 4)
 
       glBegin(GL_TRIANGLES)
-      for (t:mesh.Triangle <- mesh.getTriangles) {
-        for (p:Vec3 <- t.vertexLocations) {
-          glVertex3f(p.x, p.y, p.z)
-        }
-      }
+      for (t <- mesh.getTriangles) for (p <- t.vertexLocations) glVertex3f(p.x, p.y, p.z)
       glEnd()
-
     }
 
     def frame(gl:GL2) {
+
       import gl._
 
       glMatrixMode(GL_MODELVIEW)
@@ -153,22 +154,24 @@ class App {
       glMateriali(GL_FRONT_AND_BACK, GL_SHININESS, 0)
 
       glBegin(GL_LINES)
-      for (e:mesh.Edge <- mesh.getEdges) for (v <- e.locations) draw(gl, v)
+      for (e <- mesh.getEdges) for (v <- e.locations) draw(gl, v)
       glEnd()
-
     }
 
-    def draw(gl: GL2, v: Vec3) { gl glVertex3f(v.x, v.y, v.z) }
+    def draw(gl: GL2, v: Vec3) {
+      gl glVertex3f(v.x, v.y, v.z)
+    }
 
     def dispose(p1: GLAutoDrawable) { }
 
     def init(glDrawable: GLAutoDrawable) {
-      val gl = (glDrawable getGL).getGL2
+
+      val gl = glDrawable getGL() getGL2()
       import gl._
 
       glEnable(GL_BLEND)
       glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-      glEnable( GL_LINE_SMOOTH )
+      glEnable(GL_LINE_SMOOTH)
       glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
       glClearColor(0.5f, 0.65f, 0.8f, 0)
 
@@ -178,7 +181,6 @@ class App {
       glLightfv(GL_LIGHT0, GL_AMBIENT, Array(0.2f, 0.2f, 0.2f, 1f), 0)
       glLightfv(GL_LIGHT0, GL_DIFFUSE, Array(1f, 1f, 1f, 1f), 0)
       glLightfv(GL_LIGHT0, GL_POSITION, Array(10f, 10, 10, 1), 0)
-
     }
 
     def reshape(glDrawable: GLAutoDrawable, x: Int, y: Int, width: Int, height: Int) { }
@@ -187,11 +189,13 @@ class App {
 
   object camera {
 
-    var up:Vec3 = xyz(0, 1, 0)
+    import vine.geometry._
+    import javax.media.opengl, opengl._, opengl.fixedfunc.GLMatrixFunc._
 
-    var view:Line3 = aToB(xyz(0, 0, 2), origin3)
+    var up: Vec3 = xyz(0, 1, 0)
+    var view: Line3 = aToB(xyz(0, 0, 2), origin3)
 
-    def set(gl:GL2) {
+    def set(gl: GL2) {
       gl glMatrixMode(GL_PROJECTION)
       gl glLoadIdentity()
 

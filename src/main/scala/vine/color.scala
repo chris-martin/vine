@@ -1,8 +1,5 @@
 package vine
 
-import java.nio.FloatBuffer
-import util.parsing.combinator.RegexParsers
-
 object color {
 
   trait Color {
@@ -13,7 +10,7 @@ object color {
     def a: Float
 
     def toArray: Array[Float] = Array(r, g, b, a)
-    def toFloatBuffer: FloatBuffer = FloatBuffer.wrap(toArray)
+    def toFloatBuffer = java.nio.FloatBuffer.wrap(toArray)
 
     def withAlpha(a: Float) = new RGBA(r, g, b, a)
     def transparent = this withAlpha 0
@@ -49,12 +46,10 @@ object color {
     else throw new IllegalArgumentException
   }
 
-  object implicits {
-    implicit def toArray(c: Color): Array[Float] = c.toArray
-    implicit def toFloatBuffer(c: Color): FloatBuffer = c.toFloatBuffer
-  }
+  implicit def toArray(c: Color): Array[Float] = c.toArray
+  implicit def toFloatBuffer(c: Color) = c.toFloatBuffer
 
-  object parser extends RegexParsers {
+  object parser extends util.parsing.combinator.RegexParsers {
 
     def parse(s: String): Option[Color] = parseAll(phrase, s.toLowerCase).map(Some(_)).getOrElse(None)
 

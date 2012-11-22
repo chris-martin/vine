@@ -2,7 +2,7 @@ package vine
 
 import javax.media.opengl.{GLProfile, GLAutoDrawable, GL2, GL}
 
-object opengl {
+object OpenGL {
 
   val glProfile = GLProfile.getDefault
 

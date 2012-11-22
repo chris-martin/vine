@@ -1,42 +1,41 @@
-package vine
+package vine.color
 
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
 import org.scalatest.FunSuite
-import vine.color._
 
 @RunWith(classOf[JUnitRunner])
 class colorTest extends FunSuite {
 
   test(""""transparent" = transparent white""") {
-    assert(color("#fff") == color.white)
+    assert(parse("transparent") == white.transparent)
   }
   test(""""#fff" = white""") {
-    assert(color("#fff") == color.white)
+    assert(parse("#fff") == white)
   }
   test(""""#ffffff" = white""") {
-    assert(color("#ffffff") == color.white)
+    assert(parse("#ffffff") == white)
   }
   test(""""#000" = black""") {
-    assert(color("#000") == color.black)
+    assert(parse("#000") == black)
   }
   test(""""#000000" = black""") {
-    assert(color("#000000") == color.black)
+    assert(parse("#000000") == black)
   }
   test(""""#fff0" = transparent white""") {
-    assert(color("#fff0") == color.white.transparent)
+    assert(parse("#fff0") == white.transparent)
   }
   test(""""#ffffff00" = transparent white""") {
-    assert(color("#ffffff00") == color.white.transparent)
+    assert(parse("#ffffff00") == white.transparent)
   }
   test(""""#0000" = transparent black""") {
-    assert(color("#0000") == color.black.transparent)
+    assert(parse("#0000") == black.transparent)
   }
   test(""""#00000000" = transparent black""") {
-    assert(color("#00000000") == color.black.transparent)
+    assert(parse("#00000000") == black.transparent)
   }
   test(""""#3333" = "#33333333"""") {
-    assert(color("#3333") == color("#33333333"))
+    assert(parse("#3333") == parse("#33333333"))
   }
 
 }

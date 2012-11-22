@@ -28,10 +28,10 @@ class App {
 
   object mouseListener extends java.awt.event.MouseAdapter {
 
-    import vine.geometry._
+    import vine.geometry._, geometry2._, geometry3.{rotatePointAroundLine, pointAndStep}
     import java.awt.event.MouseEvent
 
-    var previous:Option[Vec2] = None
+    var previous:Option[Vec] = None
 
     override def mousePressed(e: MouseEvent) {
       previous = Some(xy(e.getX, e.getY))
@@ -47,7 +47,7 @@ class App {
       previous = Some(b)
     }
 
-    def mouseDragged(drag:Line2) {
+    def mouseDragged(drag:Line) {
       val eye = camera.view.a
       val target = camera.view.b
       val forward = camera.view.ab.unit
@@ -75,7 +75,7 @@ class App {
     frame.dispose()
   }
 
-  object capabilities extends javax.media.opengl.GLCapabilities(vine.opengl.glProfile) {
+  object capabilities extends javax.media.opengl.GLCapabilities(vine.OpenGL.glProfile) {
 
     setRedBits(8)
     setBlueBits(8)
@@ -107,12 +107,17 @@ class App {
     setVisible(true)
   }
 
-  val faceColor = color("#e73")
-  val wireColor = color("#3332")
+  object colors {
+
+    import vine.color
+
+    val face = color.parse("#e73")
+    val wire = color.parse("#3332")
+  }
 
   object renderer extends javax.media.opengl.GLEventListener {
 
-    import vine.color._, vine.opengl._, vine.geometry._
+    import vine.OpenGL._, vine.geometry.geometry3._
     import javax.media.opengl, opengl._, opengl.GL._, opengl.GL2._
     import opengl.fixedfunc, fixedfunc.GLLightingFunc._, fixedfunc.GLMatrixFunc._
 
@@ -133,8 +138,8 @@ class App {
       glMatrixMode(GL_MODELVIEW)
       glLoadIdentity()
 
-      glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, faceColor)
-      glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, faceColor)
+      glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, colors.face)
+      glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, colors.face)
       glMateriali(GL_FRONT_AND_BACK, GL_SHININESS, 4)
 
       glBegin(GL_TRIANGLES)
@@ -149,8 +154,8 @@ class App {
       glMatrixMode(GL_MODELVIEW)
       glLoadIdentity()
 
-      glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, wireColor)
-      glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, wireColor)
+      glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, colors.wire)
+      glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, colors.wire)
       glMateriali(GL_FRONT_AND_BACK, GL_SHININESS, 0)
 
       glBegin(GL_LINES)
@@ -158,7 +163,7 @@ class App {
       glEnd()
     }
 
-    def draw(gl: GL2, v: Vec3) {
+    def draw(gl: GL2, v: Vec) {
       gl glVertex3f(v.x, v.y, v.z)
     }
 
@@ -189,11 +194,11 @@ class App {
 
   object camera {
 
-    import vine.geometry._
+    import vine.geometry.geometry3._
     import javax.media.opengl, opengl._, opengl.fixedfunc.GLMatrixFunc._
 
-    var up: Vec3 = xyz(0, 1, 0)
-    var view: Line3 = aToB(xyz(0, 0, 2), origin3)
+    var up: Vec = xyz(0, 1, 0)
+    var view: Line = aToB(xyz(0, 0, 2), origin)
 
     def set(gl: GL2) {
       gl glMatrixMode(GL_PROJECTION)

@@ -1,6 +1,6 @@
 package vine
 
-import vine.geometry._
+import vine.geometry.geometry3._
 import collection.mutable.ArrayBuffer
 
 class Mesh() {
@@ -31,7 +31,7 @@ class Mesh() {
 
   }*/
 
-  def shift(offset: Vec3) { for (v <- _vertices) v.location = v.location.+(offset) }
+  def shift(offset: Vec) { for (v <- _vertices) v.location = v.location + offset }
 
   def translateCenterToOrigin() { shift(center * -1) }
 
@@ -140,7 +140,7 @@ class Mesh() {
     val idGenerator:Iterator[Int] = (1 until Int.MaxValue).iterator
   }
 
-  class Vertex (var location:Vec3) {
+  class Vertex (var location:Vec) {
 
     val id = Vertex.idGenerator.next()
 
@@ -152,6 +152,6 @@ class Mesh() {
 
   }
 
-  implicit def vertexToLocation(vertex:Vertex): Vec3 = vertex.location
+  implicit def vertexToLocation(vertex:Vertex): Vec = vertex.location
 
 }

@@ -1,15 +1,17 @@
 package vine
 
-class App {
+import geometry.geometry3._
 
-  val glu = new javax.media.opengl.glu.GLU
-  import glu._
+class App {
 
   val mesh = Ply.parse(Ply.getClass.getResourceAsStream("bun_zipper_res3.ply"))
   mesh.translateCenterToOrigin()
   println(mesh)
 
+  val glu = new javax.media.opengl.glu.GLU
   val animator = new com.jogamp.opengl.util.FPSAnimator(canvas, 20)
+  val camera = new opengl.Camera(xyz(0, 1, 0), aToB(xyz(0, 0, 2), origin), glu, canvas.getSize)
+  val frame = new opengl.CanvasFrame(canvas, "Vine")
 
   object keyListener extends java.awt.event.KeyAdapter {
 
@@ -75,36 +77,12 @@ class App {
     frame.dispose()
   }
 
-  object capabilities extends javax.media.opengl.GLCapabilities(vine.OpenGL.glProfile) {
-
-    setRedBits(8)
-    setBlueBits(8)
-    setGreenBits(8)
-    setAlphaBits(8)
-  }
-
-  object canvas extends javax.media.opengl.awt.GLCanvas(capabilities) {
-
+  object canvas extends opengl.Canvas {
     setSize(1000, 800)
-    setIgnoreRepaint(true)
     addGLEventListener(renderer)
     addMouseListener(mouseListener)
     addMouseMotionListener(mouseListener)
     addKeyListener(keyListener)
-  }
-
-  object frame extends javax.swing.JFrame("Vine") {
-
-    import java.awt.{BorderLayout,Toolkit}
-
-    getContentPane setLayout new BorderLayout
-    getContentPane add(canvas, BorderLayout.CENTER)
-
-    val screenSize = Toolkit.getDefaultToolkit.getScreenSize
-
-    setSize(getContentPane getPreferredSize)
-    setLocation((screenSize.width - getWidth) / 2, (screenSize.height - getHeight) / 2)
-    setVisible(true)
   }
 
   object colors {
@@ -117,9 +95,10 @@ class App {
 
   object renderer extends javax.media.opengl.GLEventListener {
 
-    import vine.OpenGL._, vine.geometry.geometry3._
-    import javax.media.opengl, opengl._, opengl.GL._, opengl.GL2._
-    import opengl.fixedfunc, fixedfunc.GLLightingFunc._, fixedfunc.GLMatrixFunc._
+    import vine.geometry.geometry3._
+    import opengl._
+    import javax.media.opengl._, javax.media.opengl.GL._, javax.media.opengl.GL2._
+    import  fixedfunc.GLLightingFunc._, fixedfunc.GLMatrixFunc._
 
     def display(glDrawable: GLAutoDrawable) {
 
@@ -189,28 +168,6 @@ class App {
     }
 
     def reshape(glDrawable: GLAutoDrawable, x: Int, y: Int, width: Int, height: Int) { }
-
-  }
-
-  object camera {
-
-    import vine.geometry.geometry3._
-    import javax.media.opengl, opengl._, opengl.fixedfunc.GLMatrixFunc._
-
-    var up: Vec = xyz(0, 1, 0)
-    var view: Line = aToB(xyz(0, 0, 2), origin)
-
-    def set(gl: GL2) {
-      gl glMatrixMode(GL_PROJECTION)
-      gl glLoadIdentity()
-
-      val widthHeightRatio = canvas.getWidth / canvas.getHeight
-      gluPerspective(10, widthHeightRatio, 1, 1000)
-      gluLookAt(
-        view.a.x, view.a.y, view.a.z,
-        view.b.x, view.b.y, view.b.z,
-        up.x, up.y, up.z)
-    }
 
   }
 

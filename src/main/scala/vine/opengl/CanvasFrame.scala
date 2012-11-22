@@ -1,8 +1,8 @@
 package vine.opengl
 
-import java.awt.{BorderLayout,Canvas,Toolkit}
+import java.awt, awt.{BorderLayout,Toolkit}
 
-class CanvasFrame (val canvas: Canvas, val frameTitle: String)
+class CanvasFrame (val canvas: awt.Canvas, val frameTitle: String)
     extends javax.swing.JFrame(frameTitle) {
 
   getContentPane setLayout new BorderLayout

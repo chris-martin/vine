@@ -19,7 +19,7 @@ class Camera(var up: Vec, var view: Line, glu: GLU, dim: Dimension) {
     glMatrixMode(GL_PROJECTION)
     glLoadIdentity()
 
-    gluPerspective(10, widthHeightRatio, 1, 1000)
+    gluPerspective(7, widthHeightRatio, 1, 1000)
     gluLookAt(
       view.a.x, view.a.y, view.a.z,
       view.b.x, view.b.y, view.b.z,

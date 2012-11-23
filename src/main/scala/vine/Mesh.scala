@@ -6,17 +6,31 @@ import collection.mutable.{ArrayBuffer,HashSet}
 class Mesh() {
 
   private val _vertices = new ArrayBuffer[Vertex]
-  private val _triangles = new ArrayBuffer[Triangle]()
+  private val _components = new HashSet[Component]()
+
+  /** Number of vertices */
+  def numVertices: Int = _vertices.size
 
   /** All triangles */
-  def triangles: Seq[Triangle] = _triangles
+  def triangles: Iterable[Triangle] = _components.flatten
+
+  /** Number of triangles */
+  def numTriangles: Int = _components.map(c => c.size).sum
+
+  /** Number of connected components */
+  def numComponents: Int = _components.size
 
   /** All edges */
   def edges: Seq[Edge] = {
     val edges = new collection.mutable.HashSet[Edge]()
-    for (t <- _triangles) for (e <- t.undirectedEdges) edges.add(e)
+    for (t <- triangles)
+      for (e <- t.undirectedEdges)
+        edges.add(e)
     edges.toSeq
   }
+
+  /** Number of edges */
+  def numEdges: Int = edges.size
 
   /** Finds any triangles that contain edge e. */
   def findTriangles(e: Edge): Seq[Triangle] = {
@@ -52,8 +66,8 @@ class Mesh() {
     midpoint(min, max)
   }
 
-  override def toString = "Mesh(%d vertices, %d triangles, %d edges)".format(
-    _vertices.length, _triangles.length, edges.size)
+  override def toString = "Mesh(%d vertices, %d components, %d triangles, %d edges)".format(
+    numVertices, numComponents, numTriangles, numEdges)
 
   trait Edge {
 
@@ -94,13 +108,32 @@ class Mesh() {
     private val idGenerator:Iterator[Int] = (1 until Int.MaxValue).iterator
   }
 
-  private class Component (var size:Int) {
-    val id = Component.idGenerator.next()
+  private class Component extends Iterable[Triangle] {
+
+    _components add this
+
+    val _id = Component.idGenerator.next()
+
+    var isReversed: Boolean = false
+    def toggleReverse() { isReversed = !isReversed }
+
+    private val _triangles = new ArrayBuffer[Triangle]
+    def iterator = _triangles.iterator
+    def add(t: Triangle) { _triangles append t }
+
+    def convertTo(o: Component) {
+      for (t <- this) t setComponent o
+      _components remove this
+      _triangles clear()
+    }
+
+    override def toString = "Component %d".format(_id)
+
   }
 
   class Triangle (private val _corners:Array[Corner]) {
 
-    private var component = new Component(1)
+    private var component: Component = null
 
     def this(vertices:Seq[Vertex]) {
 
@@ -110,12 +143,28 @@ class Mesh() {
         _corners(i) = new Corner(vertices(i), Triangle.this)
       }
 
+      setComponent(new Component)
+
       for (myEdge:DirectedEdge <- directedEdges) {
         for (adjacentTriangle <- findTriangles(myEdge)) {
           val yourEdge:DirectedEdge = adjacentTriangle.directedEdge(myEdge).get
-          if (myEdge == yourEdge) {
-            // todo - reverse() one of the components
+
+          if (component != adjacentTriangle.component) {
+
+            val (smallerComponent, largerComponent) = {
+              val a = component; val b = adjacentTriangle.component
+              if (a.size < b.size) (a,b) else (b,a)
+            }
+
+            // If the shared edge between the two adjacent triangles is oriented
+            // in the same direction for both triangles, then the two triangles are
+            // in different components, and one of the components needs to be reversed.
+            if (myEdge == yourEdge) { smallerComponent toggleReverse() }
+
+            smallerComponent convertTo largerComponent
+
           }
+
           {
             val v = myEdge.vertices(0)
             val myCorner = cornerAtVertex(v).get
@@ -131,16 +180,17 @@ class Mesh() {
         }
       }
 
-      _triangles.append(this)
     }
 
-    def reverse() {
-      val t = _corners(0)
-      _corners(0) = _corners(1)
-      _corners(1) = t
+    def setComponent(c: Component) {
+      this.component = c
+      c add this
     }
 
-    def corners: List[Corner] = List.concat(_corners)
+    def corners: List[Corner] = component.isReversed match {
+      case false => List.concat(_corners)
+      case true => List.concat(_corners).reverse
+    }
 
     def cornerAtVertex(v: Vertex): Option[Corner] = corners.find(c => c.vertex == v)
 

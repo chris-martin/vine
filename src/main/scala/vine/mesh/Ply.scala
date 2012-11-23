@@ -1,4 +1,4 @@
-package vine
+package vine.mesh
 
 object Ply {
 
@@ -6,7 +6,7 @@ object Ply {
     """element (\S+) ([-\.\d]+)""", "element", "count")
   private val whitespaceRegex = """[ \t]+""".r
 
-  def parse(in: java.io.InputStream): Mesh = {
+  def parse(in: java.io.InputStream): Mesh3d = {
 
     val scanner = new java.util.Scanner(in)
     scanner useDelimiter(util.Properties.lineSeparator)
@@ -20,7 +20,7 @@ object Ply {
       }
     } while (!(line equals "end_header"))
 
-    val mesh = new Mesh()
+    val mesh = new Mesh3d
 
     def nextSplitLine() = whitespaceRegex split(scanner next())
 

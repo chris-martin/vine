@@ -1,6 +1,7 @@
 package vine
 
 import geometry.geometry3._
+import mesh._
 
 class App {
 
@@ -171,4 +172,10 @@ class App {
 
   }
 
+}
+
+object Main {
+  def main(args: Array[String]) {
+    new App()
+  }
 }

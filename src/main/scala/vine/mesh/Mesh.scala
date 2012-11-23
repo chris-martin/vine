@@ -1,12 +1,13 @@
-package vine
+package vine.mesh
 
-import vine.geometry.geometry3._
 import collection.mutable.{ArrayBuffer,HashSet}
 
-class Mesh() {
+class Mesh[Location]() {
 
   private val _vertices = new ArrayBuffer[Vertex]
   private val _components = new HashSet[Component]()
+
+  def vertices: Iterable[Vertex] = _vertices
 
   /** Number of vertices */
   def numVertices: Int = _vertices.size
@@ -51,20 +52,6 @@ class Mesh() {
   def getBfsPseudoHamiltonianCycle: Iterable[Edge] = {
 
   }*/
-
-  def shift(offset: Vec) { for (v <- _vertices) v.location = v.location + offset }
-
-  def translateCenterToOrigin() { shift(center * -1) }
-
-  def center = {
-    var min = xyz(Float.MaxValue, Float.MaxValue, Float.MaxValue)
-    var max = xyz(Float.MinValue, Float.MinValue, Float.MinValue)
-    for (v <- _vertices) {
-      min = xyz(math.min(min.x, v.location.x), math.min(min.y, v.location.y), math.min(min.z, v.location.z))
-      max = xyz(math.max(max.x, v.location.x), math.max(max.y, v.location.y), math.max(max.z, v.location.z))
-    }
-    midpoint(min, max)
-  }
 
   override def toString = "Mesh(%d vertices, %d components, %d triangles, %d edges)".format(
     numVertices, numComponents, numTriangles, numEdges)
@@ -223,7 +210,7 @@ class Mesh() {
     val idGenerator:Iterator[Int] = (1 until Int.MaxValue).iterator
   }
 
-  class Vertex (var location:Vec) {
+  class Vertex (var location:Location) {
 
     val id = Vertex.idGenerator.next()
 
@@ -235,6 +222,6 @@ class Mesh() {
 
   }
 
-  implicit def vertexToLocation(vertex:Vertex): Vec = vertex.location
+  implicit def vertexToLocation(vertex:Vertex): Location = vertex.location
 
 }

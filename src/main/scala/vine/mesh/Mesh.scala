@@ -76,12 +76,11 @@ abstract class Mesh() {
 
     private val _id = Component.idGenerator.next()
 
-    private[Mesh] var isReversed: Boolean = false
-    private[Mesh] def toggleReverse() { isReversed = !isReversed }
-
     private val _triangles = new mutable.ArrayBuffer[Triangle]
     def iterator = _triangles.iterator
     private[Mesh] def add(t: Triangle) { _triangles append t }
+
+    private[Mesh] def reverse() { for (t <- this) t reverse() }
 
     private[Mesh] def convertTo(o: Component) {
       for (t <- this) t setComponent o
@@ -121,7 +120,7 @@ abstract class Mesh() {
             // If the shared edge between the two adjacent triangles is oriented
             // in the same direction for both triangles, then the two triangles are
             // in different components, and one of the components needs to be reversed.
-            if (myEdge == yourEdge) { smallerComponent toggleReverse() }
+            if (myEdge == yourEdge) { smallerComponent reverse() }
 
             smallerComponent convertTo largerComponent
 
@@ -131,13 +130,13 @@ abstract class Mesh() {
             val v = myEdge.vertices(0)
             val myCorner = cornerAtVertex(v).get
             val yourCorner = adjacentTriangle.cornerAtVertex(v).get
-            myCorner.swing = yourCorner
+            yourCorner.swing = Some(myCorner)
           }
           {
-            val v = myEdge.vertices(0)
+            val v = myEdge.vertices(1)
             val myCorner = cornerAtVertex(v).get
             val yourCorner = adjacentTriangle.cornerAtVertex(v).get
-            yourCorner.swing = myCorner
+            myCorner.swing = Some(yourCorner)
           }
         }
       }
@@ -149,10 +148,9 @@ abstract class Mesh() {
       c add this
     }
 
-    def corners: List[Corner] = component.isReversed match {
-      case false => List.concat(_corners)
-      case true => List.concat(_corners).reverse
-    }
+    def reverse() { val t = _corners(0); _corners(0) = _corners(1); _corners(1) = t }
+
+    def corners: List[Corner] = List.concat(_corners)
 
     def cornerAtVertex(v: Vertex): Option[Corner] = corners.find(c => c.vertex == v)
 
@@ -172,13 +170,13 @@ abstract class Mesh() {
   }
 
   class Corner private[Mesh] (val vertex:Vertex, val triangle:Triangle) {
-
-    var swing:Corner = this
-
+    var swing: Option[Corner] = None
     vertex addCorner this
-
-    def next:Corner = triangle.corners((triangle.corners.indexOf(this) + 1) % 3)
-
+    def next: Corner = next(1)
+    def prev: Corner = next(2)
+    private def next(i: Int) = triangle.corners((triangle.corners.indexOf(this) + i) % 3)
+    def opposite: Option[Corner] = prev.swing.map(c => c.prev)
+    override def toString() = "Corner of %s".format(vertex)
   }
 
   object Vertex {
@@ -196,6 +194,8 @@ abstract class Mesh() {
     private[Mesh] def addCorner(c: Corner) { _corners = _corners :+ c }
 
     override def compare(that: Vertex) = id - that.id
+
+    override def toString() = "Vertex #%d at %s".format(id, location)
 
   }
 

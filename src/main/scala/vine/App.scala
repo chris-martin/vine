@@ -5,7 +5,7 @@ import mesh._
 
 class App {
 
-  val mesh = Ply.parse(Ply.getClass.getResourceAsStream("bun_zipper_res3.ply"))
+  val mesh:Mesh3d = Ply.parse(Ply.getClass.getResourceAsStream("bun_zipper_res3.ply"))
   mesh.translateCenterToOrigin()
   println(mesh)
 
@@ -99,7 +99,16 @@ class App {
     import vine.geometry.geometry3._
     import opengl._
     import javax.media.opengl._, javax.media.opengl.GL._, javax.media.opengl.GL2._
-    import  fixedfunc.GLLightingFunc._, fixedfunc.GLMatrixFunc._
+    import fixedfunc.GLLightingFunc._, fixedfunc.GLMatrixFunc._
+    import mesh._
+
+    class RichGL (val gl: GL2) {
+      def draw(t: Triangle) { for (v <- t.vertices) draw(v) }
+      def draw(e: Edge) { for (v <- e.vertices) draw(v) }
+      def draw(v: Vertex) { draw(v.location) }
+      def draw(p: Vec) { gl glVertex3f(p.x, p.y, p.z) }
+    }
+    implicit def richGL(gl: GL2) = new RichGL(gl)
 
     def display(glDrawable: GLAutoDrawable) {
 
@@ -123,7 +132,7 @@ class App {
       glMateriali(GL_FRONT_AND_BACK, GL_SHININESS, 4)
 
       glBegin(GL_TRIANGLES)
-      for (t <- mesh.triangles) for (p <- t.vertexLocations) glVertex3f(p.x, p.y, p.z)
+      for (t <- triangles) gl draw t
       glEnd()
     }
 
@@ -139,12 +148,8 @@ class App {
       glMateriali(GL_FRONT_AND_BACK, GL_SHININESS, 0)
 
       glBegin(GL_LINES)
-      for (e <- mesh.edges) for (v <- e.locations) draw(gl, v)
+      for (e <- mesh.edges) gl draw e
       glEnd()
-    }
-
-    def draw(gl: GL2, v: Vec) {
-      gl glVertex3f(v.x, v.y, v.z)
     }
 
     def dispose(p1: GLAutoDrawable) { }

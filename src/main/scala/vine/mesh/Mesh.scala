@@ -1,57 +1,32 @@
 package vine.mesh
 
-import collection.mutable.{ArrayBuffer,HashSet}
+import collection.mutable
 
-class Mesh[Location]() {
+abstract class Mesh() {
 
-  private val _vertices = new ArrayBuffer[Vertex]
-  private val _components = new HashSet[Component]()
+  type Location
+
+  private val _vertices = new mutable.ArrayBuffer[Vertex]
+  private val _components = new mutable.HashSet[Component]
 
   def vertices: Iterable[Vertex] = _vertices
-
-  /** Number of vertices */
   def numVertices: Int = _vertices.size
+  def addVertex(location: Location): Vertex = new Vertex(location)
 
-  /** All triangles */
-  def triangles: Iterable[Triangle] = _components.flatten
+  def triangles: Iterable[Triangle] = components.flatten
+  def numTriangles: Int = _components.toSeq.map(c => c.size).sum
+  def addTriangle(vs: Vertex*): Triangle = new Triangle(vs)
 
-  /** Number of triangles */
-  def numTriangles: Int = _components.map(c => c.size).sum
-
-  /** Number of connected components */
+  def components: Iterable[Component] = _components
   def numComponents: Int = _components.size
 
-  /** All edges */
-  def edges: Seq[Edge] = {
-    val edges = new collection.mutable.HashSet[Edge]()
-    for (t <- triangles)
-      for (e <- t.undirectedEdges)
-        edges.add(e)
-    edges.toSeq
-  }
-
-  /** Number of edges */
+  def edges: Seq[Edge] = triangles.flatMap(t => t.undirectedEdges).toSeq
   def numEdges: Int = edges.size
 
   /** Finds any triangles that contain edge e. */
-  def findTriangles(e: Edge): Seq[Triangle] = {
-    val found = HashSet[Triangle]()
-    for (v <- e.vertices) {
-      for (c <- v.corners) {
-        val t = c.triangle
-        val matchedEdge = t.directedEdge(e)
-        if (matchedEdge.isDefined) {
-          found add t
-        }
-      }
-    }
-    found.toSeq
-  }
-
-  /*
-  def getBfsPseudoHamiltonianCycle: Iterable[Edge] = {
-
-  }*/
+  def findTriangles(e: Edge): Seq[Triangle] =
+    e.vertices.map(v => v.corners).flatten.map(c => c.triangle).
+      filter(t => t.directedEdge(e).isDefined).toSeq.distinct
 
   override def toString = "Mesh(%d vertices, %d components, %d triangles, %d edges)".format(
     numVertices, numComponents, numTriangles, numEdges)
@@ -73,7 +48,7 @@ class Mesh[Location]() {
 
   class UndirectedEdge private[Mesh] (private var _a: Vertex, private var _b: Vertex) extends Edge {
 
-    if (_a.id < _b.id) { val t = _a; _a = _b; _b = t }
+    if (_a < _b) { val t = _a; _a = _b; _b = t }
 
     override def vertices = List(_a, _b)
     override def undirectedEdge = this
@@ -95,30 +70,30 @@ class Mesh[Location]() {
     private val idGenerator:Iterator[Int] = (1 until Int.MaxValue).iterator
   }
 
-  private class Component extends Iterable[Triangle] {
+  class Component private[Mesh] () extends Iterable[Triangle] {
 
     _components add this
 
-    val _id = Component.idGenerator.next()
+    private val _id = Component.idGenerator.next()
 
-    var isReversed: Boolean = false
-    def toggleReverse() { isReversed = !isReversed }
+    private[Mesh] var isReversed: Boolean = false
+    private[Mesh] def toggleReverse() { isReversed = !isReversed }
 
-    private val _triangles = new ArrayBuffer[Triangle]
+    private val _triangles = new mutable.ArrayBuffer[Triangle]
     def iterator = _triangles.iterator
-    def add(t: Triangle) { _triangles append t }
+    private[Mesh] def add(t: Triangle) { _triangles append t }
 
-    def convertTo(o: Component) {
+    private[Mesh] def convertTo(o: Component) {
       for (t <- this) t setComponent o
       _components remove this
       _triangles clear()
     }
 
-    override def toString = "Component %d".format(_id)
+    override def toString() = "Component #%d with %d triangles".format(_id, size)
 
   }
 
-  class Triangle (private val _corners:Array[Corner]) {
+  class Triangle private (private val _corners:Array[Corner]) {
 
     private var component: Component = null
 
@@ -130,7 +105,7 @@ class Mesh[Location]() {
         _corners(i) = new Corner(vertices(i), Triangle.this)
       }
 
-      setComponent(new Component)
+      setComponent(new Component())
 
       for (myEdge:DirectedEdge <- directedEdges) {
         for (adjacentTriangle <- findTriangles(myEdge)) {
@@ -210,7 +185,7 @@ class Mesh[Location]() {
     val idGenerator:Iterator[Int] = (1 until Int.MaxValue).iterator
   }
 
-  class Vertex (var location:Location) {
+  class Vertex private[Mesh] (var location: Location) extends Ordered[Vertex] {
 
     val id = Vertex.idGenerator.next()
 
@@ -219,6 +194,8 @@ class Mesh[Location]() {
     private var _corners:List[Corner] = List()
     def corners:List[Corner] = _corners
     private[Mesh] def addCorner(c: Corner) { _corners = _corners :+ c }
+
+    override def compare(that: Vertex) = id - that.id
 
   }
 

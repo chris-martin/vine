@@ -2,20 +2,32 @@ package vine.mesh
 
 import vine.geometry.geometry3._
 
-class Mesh3d extends Mesh[Vec] {
+class Mesh3d extends Mesh {
 
-  def shift(offset: Vec) { for (v <- vertices) v.location = v.location + offset }
+  override type Location = Vec
 
-  def translateCenterToOrigin() { shift(center * -1) }
+  def shift(offset: Vec) {
+    for (v <- vertices) v.location += offset
+  }
+
+  def translateCenterToOrigin() {
+    shift(center * -1)
+  }
 
   def center = {
-    var min = xyz(Float.MaxValue, Float.MaxValue, Float.MaxValue)
-    var max = xyz(Float.MinValue, Float.MinValue, Float.MinValue)
+
+    import math.{min, max}
+
+    var a = xyzSeq(List.fill(3)(Float.MaxValue))
+    var b = xyzSeq(List.fill(3)(Float.MinValue))
+
     for (v <- vertices) {
-      min = xyz(math.min(min.x, v.location.x), math.min(min.y, v.location.y), math.min(min.z, v.location.z))
-      max = xyz(math.max(max.x, v.location.x), math.max(max.y, v.location.y), math.max(max.z, v.location.z))
+      val p = v.location
+      a = xyz(min(a.x, p.x), min(a.y, p.y), min(a.z, p.z))
+      b = xyz(max(b.x, p.x), max(b.y, p.y), max(b.z, p.z))
     }
-    midpoint(min, max)
+
+    midpoint(a, b)
   }
 
 }

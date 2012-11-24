@@ -1,5 +1,7 @@
 package vine.mesh
 
+import vine.geometry.geometry3._
+
 object Ply {
 
   private val elementRegex = new util.matching.Regex(
@@ -26,11 +28,11 @@ object Ply {
 
     val vertices = collection.mutable.ArrayBuffer[mesh.Vertex]()
     for (i <- 0 until (counts get "vertex" get)) {
-      vertices append new mesh.Vertex( nextSplitLine() slice(0, 3) map { x => x.toFloat } )
+      vertices append mesh.addVertex( nextSplitLine() slice(0, 3) map { x => x.toFloat } )
     }
 
     for (i <- 0 until (counts get "face" get)) {
-      new mesh.Triangle( nextSplitLine() slice(1, 4) map { x => vertices(x.toInt) } )
+      mesh addTriangle ( nextSplitLine() slice(1, 4) map { x => vertices(x.toInt) }:_* )
     }
 
     mesh

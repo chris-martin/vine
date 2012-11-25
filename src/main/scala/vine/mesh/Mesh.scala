@@ -20,7 +20,7 @@ abstract class Mesh {
   def components: Iterable[Component] = _components
   def numComponents: Int = _components.size
 
-  def edges: Seq[Edge] = triangles.flatMap(t => t.undirectedEdges).toSeq
+  def edges: Seq[UndirectedEdge] = triangles.flatMap(t => t.undirectedEdges).toSeq
   def numEdges: Int = edges.size
 
   /** Finds any triangles that contain edge e. */
@@ -203,24 +203,28 @@ abstract class Mesh {
 
   implicit def vertexToLocation(vertex:Vertex): Location = vertex.location
 
-  class LR (val triangles: immutable.HashSet[Triangle])
+  class LR ( val triangles: immutable.HashSet[Triangle],
+             val cycle: immutable.Seq[Vertex] )
 
   def lr: Seq[LR] = components.map(c => lr(c)).toSeq
-  def lr(component: Component): LR = lr(component.iterator.next().corners(0))
+  def lr(component: Component): LR = lr(component.head.corners.head)
 
   def lr(firstCorner: Corner): LR = {
 
     val selectedTriangles = new mutable.HashSet[Triangle]
     val visitedVertices = new mutable.HashSet[Vertex]
     val workCorners = (0 until 2).map(_ => new mutable.Queue[Corner]).toSeq
+    var cycle = new vine.collection.CircularSet[Vertex]
 
     def select(c: Corner) {
       selectedTriangles add c.triangle
       visitedVertices add c.vertex
+      cycle insert (c.prev.vertex, c.vertex, c.next.vertex)
       workCorners(0) enqueue c.next
       workCorners(1) enqueue c.prev
     }
 
+    workCorners(0) enqueue firstCorner
     select(firstCorner)
     visitedVertices add firstCorner.next.vertex
     visitedVertices add firstCorner.prev.vertex
@@ -232,7 +236,10 @@ abstract class Mesh {
         foreach(d => select(d))
     }
 
-    new LR(immutable.HashSet(selectedTriangles.toSeq:_*))
+    new LR(
+      immutable.HashSet(selectedTriangles.toSeq:_*),
+      immutable.Vector(cycle.toSeq:_*)
+    )
   }
 
 }

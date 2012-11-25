@@ -1,18 +1,20 @@
 package vine
 
 import geometry.geometry3._
-import mesh._
+import mesh.Ply
 
-import collection.immutable
+import scala.collection.immutable
 import javax.media.opengl.glu.{GLU,GLUquadric}
 
 class App {
 
-  val mesh:Mesh3d = Ply.parse(Ply.getClass.getResourceAsStream("bun_zipper_res3.ply"))
+  val mesh = Ply.parse(Ply.getClass.getResourceAsStream("bun_zipper_res3.ply"))
   mesh.translateCenterToOrigin()
   println(mesh)
 
-  val lrt = immutable.HashSet[mesh.Triangle](mesh.lr.map(lr => lr.triangles).flatten:_*)
+  val lr = mesh.lr
+  val lrt = immutable.HashSet[mesh.Triangle](lr.flatMap(lr => lr.triangles):_*)
+  val lre = lrt.flatMap(t => t.undirectedEdges)
 
   val glu = new GLU
   val animator = new com.jogamp.opengl.util.FPSAnimator(canvas, 20)
@@ -100,7 +102,7 @@ class App {
       new DefaultMaterial(color.parse("#e73")),
       new DefaultMaterial(color.parse("#fdc"))
     )
-    val wire = new DefaultMaterial(color.parse("#000"))
+    val wire = new DefaultMaterial(color.parse("#000c"))
   }
 
   object renderer extends javax.media.opengl.GLEventListener {
@@ -110,7 +112,7 @@ class App {
     import javax.media.opengl.{fixedfunc,GL2,GLAutoDrawable}
     import javax.media.opengl.GL._, javax.media.opengl.GL2._
     import fixedfunc.GLLightingFunc._, fixedfunc.GLMatrixFunc._
-    import mesh._
+    import mesh.{Vertex, Edge, Triangle, triangles, vertexToLocation}
 
     var gluQuad: GLUquadric = null
 
@@ -143,12 +145,13 @@ class App {
       }
 
       def draw(e: Edge) {
-        val a = e.locations(0)
-        val b = e.locations(1)
+        drawEdge(e.locations(0), e.locations(1))
+      }
+      def drawEdge(a: Vec, b: Vec) {
         gl glPushMatrix()
         translate(a)
         rotate(b-a)
-        glu.gluCylinder(gluQuad, 0.0002, 0.0002, distance(a, b), 5, 5)
+        glu.gluCylinder(gluQuad, 0.0002, 0.0002, distance(a, b), 3, 3)
         gl glPopMatrix()
       }
 
@@ -162,19 +165,10 @@ class App {
       gl glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
       faces(gl)
       frame(gl)
-
-      /*gl glPushMatrix()
-      gl glTranslatef (0, 0.05f, 0)
-      gl glRotatef (45,1,0,0)
-      gl glRotatef (45,0,1,0)
-      glu gluCylinder (gluQuad, 0.01, 0.01, 0.05, 5, 5)
-      gl glPopMatrix()*/
-
       gl glFlush()
     }
 
     def faces(gl:GL2) {
-
 
       import gl._
 
@@ -197,7 +191,12 @@ class App {
       glLoadIdentity()
 
       gl setMaterial material.wire
-      for (e <- mesh.edges) gl draw e
+      for (lrc <- lr) {
+        for ((a,b) <- lrc.cycle.zip(lrc.cycle.slice(1, lrc.cycle.size))) {
+          gl drawEdge(a, b)
+        }
+      }
+      //for (e <- mesh.edges) if (lre contains e) gl draw e
     }
 
     def dispose(p1: GLAutoDrawable) { }

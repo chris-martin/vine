@@ -6,15 +6,20 @@ class Mesh3d extends Mesh {
 
   override type Location = Vec
 
-  def shift(offset: Vec) {
+  def translate(offset: Vec) {
     for (v <- vertices) v.location += offset
   }
 
   def translateCenterToOrigin() {
-    shift(center * -1)
+    translate(center * -1)
   }
 
   def center = {
+    val bb = boundingBox
+    midpoint(bb._1, bb._2)
+  }
+
+  def boundingBox: Pair[Vec, Vec] = {
 
     import math.{min, max}
 
@@ -27,7 +32,7 @@ class Mesh3d extends Mesh {
       b = xyz(max(b.x, p.x), max(b.y, p.y), max(b.z, p.z))
     }
 
-    midpoint(a, b)
+    (a, b)
   }
 
 }

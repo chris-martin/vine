@@ -9,7 +9,8 @@ import javax.media.opengl.glu.{GLU,GLUquadric}
 class App {
 
   val mesh = Ply.parse(Ply.getClass.getResourceAsStream("bun_zipper_res3.ply"))
-  mesh.translateCenterToOrigin()
+  val bb = mesh.boundingBox
+  mesh.translate(midpoint(bb._1, bb._2).y(bb._1.y + 0.007f) * -1)
   println(mesh)
 
   var mark: Option[mesh.Corner] = None
@@ -20,7 +21,7 @@ class App {
 
   val glu = new GLU
   val animator = new com.jogamp.opengl.util.FPSAnimator(canvas, 20)
-  val camera = new opengl.Camera(xyz(0, 1, 0), aToB(xyz(-0.5, 0.5, 2), origin), glu, canvas.getSize)
+  val camera = new opengl.Camera(xyz(0, 1, 0), aToB(xyz(-0.5, 0.5, 2), xyz(0, 0.07, 0)), glu, canvas.getSize)
   val frame = new opengl.CanvasFrame(canvas, "Vine")
 
   object keyListener extends java.awt.event.KeyAdapter {
@@ -188,7 +189,6 @@ class App {
       gl setMaterial material.floor
       gl glPushMatrix()
       gl glRotatef (90, 1, 0, 0)
-      gl glTranslatef (0, 0, 0.07f)
       glu gluDisk (gluQuad, 0, 0.12f, 50, 5)
       gl glPopMatrix()
     }

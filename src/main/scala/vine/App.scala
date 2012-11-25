@@ -12,25 +12,34 @@ class App {
   mesh.translateCenterToOrigin()
   println(mesh)
 
+  var mark: Option[mesh.Corner] = None
+
   val lr = mesh.lr
   val lrt = immutable.HashSet[mesh.Triangle](lr.flatMap(lr => lr.triangles):_*)
   val lre = lrt.flatMap(t => t.undirectedEdges)
 
   val glu = new GLU
   val animator = new com.jogamp.opengl.util.FPSAnimator(canvas, 20)
-  val camera = new opengl.Camera(xyz(0, 1, 0), aToB(xyz(0, 0, 2), origin), glu, canvas.getSize)
+  val camera = new opengl.Camera(xyz(0, 1, 0), aToB(xyz(-0.5, 0.5, 2), origin), glu, canvas.getSize)
   val frame = new opengl.CanvasFrame(canvas, "Vine")
 
   object keyListener extends java.awt.event.KeyAdapter {
 
-    import java.awt.event.KeyEvent
+    import java.awt.event.KeyEvent, KeyEvent._
 
     override def keyReleased(e: KeyEvent) {
       val step = camera.view.ab.mag(3)
       e.getKeyCode match {
-        case KeyEvent.VK_ESCAPE => stop()
-        case KeyEvent.VK_S => camera.view -= step
-        case KeyEvent.VK_W => camera.view += step
+        case VK_ESCAPE => stop()
+/*        case VK_S => camera.view -= step
+        case VK_W => camera.view += step*/
+        case VK_M => mark = mark match {
+          case Some(x) => None
+          case None => mesh.triangles.headOption flatMap { t => t.corners.headOption }
+        }
+        case VK_N => mark = mark map { m => m.next }
+        case VK_P => mark = mark map { m => m.prev }
+        case VK_S => mark = mark map { m => m.swing getOrElse m }
         case _ =>
       }
     }
@@ -103,6 +112,7 @@ class App {
       new DefaultMaterial(color.parse("#fdc"))
     )
     val wire = new DefaultMaterial(color.parse("#000c"))
+    val floor = new DefaultMaterial(color.parse("#5e2612"))
   }
 
   object renderer extends javax.media.opengl.GLEventListener {
@@ -112,7 +122,7 @@ class App {
     import javax.media.opengl.{fixedfunc,GL2,GLAutoDrawable}
     import javax.media.opengl.GL._, javax.media.opengl.GL2._
     import fixedfunc.GLLightingFunc._, fixedfunc.GLMatrixFunc._
-    import mesh.{Vertex, Edge, Triangle, triangles, vertexToLocation}
+    import mesh.{Vertex, Edge, Triangle, triangles, vertexToLocation, cornerToLocation}
 
     var gluQuad: GLUquadric = null
 
@@ -147,11 +157,11 @@ class App {
       def draw(e: Edge) {
         drawEdge(e.locations(0), e.locations(1))
       }
-      def drawEdge(a: Vec, b: Vec) {
+      def drawEdge(a: Vec, b: Vec, thickness: Float = 0.0002f) {
         gl glPushMatrix()
         translate(a)
         rotate(b-a)
-        glu.gluCylinder(gluQuad, 0.0002, 0.0002, distance(a, b), 3, 3)
+        glu.gluCylinder(gluQuad, thickness, thickness, distance(a, b), 3, 3)
         gl glPopMatrix()
       }
 
@@ -161,20 +171,47 @@ class App {
     def display(glDrawable: GLAutoDrawable) {
 
       val gl:GL2 = (glDrawable getGL).getGL2
-      camera set glDrawable
-      gl glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-      faces(gl)
-      frame(gl)
-      gl glFlush()
-    }
-
-    def faces(gl:GL2) {
-
       import gl._
-
+      camera set glDrawable
+      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
       glMatrixMode(GL_MODELVIEW)
       glLoadIdentity()
+      drawFloor(gl)
+      drawFaces(gl)
+      drawFrame(gl)
+      drawCycle(gl)
+      drawMark(gl)
+      glFlush()
+    }
 
+    def drawFloor(gl: GL2) {
+      gl setMaterial material.floor
+      gl glPushMatrix()
+      gl glRotatef (90, 1, 0, 0)
+      gl glTranslatef (0, 0, 0.07f)
+      glu gluDisk (gluQuad, 0, 0.12f, 50, 5)
+      gl glPopMatrix()
+    }
+
+    def drawMark(gl: GL2) {
+      mark.foreach { m =>
+        import gl._
+        gl setMaterial new DefaultMaterial(color.red)
+
+        glPushMatrix()
+        gl translate m
+        glu.gluSphere(gluQuad, 0.002f, 4, 4)
+        glPopMatrix()
+
+        glBegin(GL_TRIANGLES)
+        gl draw m.triangle
+        glEnd()
+
+      }
+    }
+
+    def drawFaces(gl:GL2) {
+      import gl._
       glBegin(GL_TRIANGLES)
       gl setMaterial material.face(0)
       for (t <- triangles) if (lrt contains t) gl draw t
@@ -183,20 +220,18 @@ class App {
       glEnd()
     }
 
-    def frame(gl:GL2) {
+    def drawFrame(gl:GL2) {
+      gl setMaterial material.wire
+      for (e <- mesh.edges) gl draw e
+    }
 
-      import gl._
-
-      glMatrixMode(GL_MODELVIEW)
-      glLoadIdentity()
-
+    def drawCycle(gl:GL2) {
       gl setMaterial material.wire
       for (lrc <- lr) {
         for ((a,b) <- lrc.cycle.zip(lrc.cycle.slice(1, lrc.cycle.size))) {
-          gl drawEdge(a, b)
+          gl drawEdge(a, b, 0.0007f)
         }
       }
-      //for (e <- mesh.edges) if (lre contains e) gl draw e
     }
 
     def dispose(p1: GLAutoDrawable) { }

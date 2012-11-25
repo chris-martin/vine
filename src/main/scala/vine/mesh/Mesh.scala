@@ -202,6 +202,7 @@ abstract class Mesh {
   }
 
   implicit def vertexToLocation(vertex:Vertex): Location = vertex.location
+  implicit def cornerToLocation(corner:Corner): Location = corner.vertex.location
 
   class LR ( val triangles: immutable.HashSet[Triangle],
              val cycle: immutable.Seq[Vertex] )
@@ -229,8 +230,8 @@ abstract class Mesh {
     visitedVertices add firstCorner.next.vertex
     visitedVertices add firstCorner.prev.vertex
 
-    while (workCorners.exists(q => q.size != 0)) {
-      workCorners(if (workCorners(0).size != 0) 0 else 1).
+    while (workCorners.exists(q => q.nonEmpty)) {
+      workCorners(if (workCorners(0).nonEmpty) 0 else 1).
         dequeue().opposite.
         filterNot(d => visitedVertices contains d.vertex).
         foreach(d => select(d))

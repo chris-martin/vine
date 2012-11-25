@@ -30,8 +30,6 @@ class CircularSet[A] extends Iterable[A] {
 
   def insert(args: A*) {
 
-    println("%d %s".format(size, args))
-
     if (isEmpty) {
       for (i <- 0 until args.size) {
         link(
@@ -61,7 +59,7 @@ class CircularSet[A] extends Iterable[A] {
               Some(forwardArgs(i + 1))
             )
           }
-        case None => //throw new IllegalArgumentException
+        case None =>
       }
     }
   }

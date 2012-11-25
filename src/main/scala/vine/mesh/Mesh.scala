@@ -1,8 +1,8 @@
 package vine.mesh
 
-import collection.mutable
+import collection.{immutable, mutable}
 
-abstract class Mesh() {
+abstract class Mesh {
 
   type Location
 
@@ -92,7 +92,13 @@ abstract class Mesh() {
 
   }
 
+  object Triangle {
+    val idGenerator:Iterator[Int] = (1 until Int.MaxValue).iterator
+  }
+
   class Triangle private (private val _corners:Array[Corner]) {
+
+    val id = Vertex.idGenerator.next()
 
     private var component: Component = null
 
@@ -107,7 +113,7 @@ abstract class Mesh() {
       setComponent(new Component())
 
       for (myEdge:DirectedEdge <- directedEdges) {
-        for (adjacentTriangle <- findTriangles(myEdge)) {
+        for (adjacentTriangle <- findTriangles(myEdge).filter(t => t != Triangle.this)) {
           val yourEdge:DirectedEdge = adjacentTriangle.directedEdge(myEdge).get
 
           if (component != adjacentTriangle.component) {
@@ -126,17 +132,11 @@ abstract class Mesh() {
 
           }
 
-          {
-            val v = myEdge.vertices(0)
-            val myCorner = cornerAtVertex(v).get
-            val yourCorner = adjacentTriangle.cornerAtVertex(v).get
-            yourCorner.swing = Some(myCorner)
-          }
-          {
-            val v = myEdge.vertices(1)
-            val myCorner = cornerAtVertex(v).get
-            val yourCorner = adjacentTriangle.cornerAtVertex(v).get
-            myCorner.swing = Some(yourCorner)
+          for (i <- 0 until 2) {
+            val v = myEdge.vertices(i)
+            var corners = ( cornerAtVertex(v).get, adjacentTriangle.cornerAtVertex(v).get )
+            if (i == 1) corners = corners.swap
+            corners._2.swing = Some(corners._1)
           }
         }
       }
@@ -150,7 +150,7 @@ abstract class Mesh() {
 
     def reverse() { val t = _corners(0); _corners(0) = _corners(1); _corners(1) = t }
 
-    def corners: List[Corner] = List.concat(_corners)
+    def corners: Seq[Corner] = List.concat(_corners)
 
     def cornerAtVertex(v: Vertex): Option[Corner] = corners.find(c => c.vertex == v)
 
@@ -158,14 +158,16 @@ abstract class Mesh() {
 
     def vertexLocations = vertices.map(vertex => vertex.location)
 
-    def directedEdges: List[DirectedEdge] = corners.map(
+    def directedEdges: Seq[DirectedEdge] = corners.map(
       corner => new DirectedEdge(corner.vertex, corner.next.vertex))
 
-    def undirectedEdges: List[UndirectedEdge] = corners.map(
+    def undirectedEdges: Seq[UndirectedEdge] = corners.map(
       corner => new UndirectedEdge(corner.vertex, corner.next.vertex))
 
     def directedEdge(e: Edge): Option[DirectedEdge] =
       directedEdges.find(d => d.undirectedEdge == e.undirectedEdge)
+
+    override def toString = "Triangle #%d".format(id)
 
   }
 
@@ -176,7 +178,7 @@ abstract class Mesh() {
     def prev: Corner = next(2)
     private def next(i: Int) = triangle.corners((triangle.corners.indexOf(this) + i) % 3)
     def opposite: Option[Corner] = prev.swing.map(c => c.prev)
-    override def toString() = "Corner of %s".format(vertex)
+    override def toString = "Corner of %s at %s".format(triangle, vertex)
   }
 
   object Vertex {
@@ -200,5 +202,37 @@ abstract class Mesh() {
   }
 
   implicit def vertexToLocation(vertex:Vertex): Location = vertex.location
+
+  class LR (val triangles: immutable.HashSet[Triangle])
+
+  def lr: Seq[LR] = components.map(c => lr(c)).toSeq
+  def lr(component: Component): LR = lr(component.iterator.next().corners(0))
+
+  def lr(firstCorner: Corner): LR = {
+
+    val selectedTriangles = new mutable.HashSet[Triangle]
+    val visitedVertices = new mutable.HashSet[Vertex]
+    val workCorners = (0 until 2).map(_ => new mutable.Queue[Corner]).toSeq
+
+    def select(c: Corner) {
+      selectedTriangles add c.triangle
+      visitedVertices add c.vertex
+      workCorners(0) enqueue c.next
+      workCorners(1) enqueue c.prev
+    }
+
+    select(firstCorner)
+    visitedVertices add firstCorner.next.vertex
+    visitedVertices add firstCorner.prev.vertex
+
+    while (workCorners.exists(q => q.size != 0)) {
+      workCorners(if (workCorners(0).size != 0) 0 else 1).
+        dequeue().opposite.
+        filterNot(d => visitedVertices contains d.vertex).
+        foreach(d => select(d))
+    }
+
+    new LR(immutable.HashSet(selectedTriangles.toSeq:_*))
+  }
 
 }

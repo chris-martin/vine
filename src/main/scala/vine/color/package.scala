@@ -10,6 +10,10 @@ package object color {
 
   val white = new RGB(1, 1, 1)
   val black = new RGB(0, 0, 0)
+  val red = new RGB(1, 0, 0)
+  val green = new RGB(0, 1, 0)
+  val blue = new RGB(0, 0, 1)
+  val yellow = new RGB(1, 1, 0)
 
   val transparent = white.transparent
 

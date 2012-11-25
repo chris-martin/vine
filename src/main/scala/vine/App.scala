@@ -3,13 +3,18 @@ package vine
 import geometry.geometry3._
 import mesh._
 
+import collection.immutable
+import javax.media.opengl.glu.{GLU,GLUquadric}
+
 class App {
 
   val mesh:Mesh3d = Ply.parse(Ply.getClass.getResourceAsStream("bun_zipper_res3.ply"))
   mesh.translateCenterToOrigin()
   println(mesh)
 
-  val glu = new javax.media.opengl.glu.GLU
+  val lrt = immutable.HashSet[mesh.Triangle](mesh.lr.map(lr => lr.triangles).flatten:_*)
+
+  val glu = new GLU
   val animator = new com.jogamp.opengl.util.FPSAnimator(canvas, 20)
   val camera = new opengl.Camera(xyz(0, 1, 0), aToB(xyz(0, 0, 2), origin), glu, canvas.getSize)
   val frame = new opengl.CanvasFrame(canvas, "Vine")
@@ -86,27 +91,67 @@ class App {
     addKeyListener(keyListener)
   }
 
-  object colors {
+  object material {
 
     import vine.color
+    import opengl.DefaultMaterial
 
-    val face = color.parse("#e73")
-    val wire = color.parse("#3332")
+    val face = List(
+      new DefaultMaterial(color.parse("#e73")),
+      new DefaultMaterial(color.parse("#fdc"))
+    )
+    val wire = new DefaultMaterial(color.parse("#000"))
   }
 
   object renderer extends javax.media.opengl.GLEventListener {
 
     import vine.geometry.geometry3._
     import opengl._
-    import javax.media.opengl._, javax.media.opengl.GL._, javax.media.opengl.GL2._
+    import javax.media.opengl.{fixedfunc,GL2,GLAutoDrawable}
+    import javax.media.opengl.GL._, javax.media.opengl.GL2._
     import fixedfunc.GLLightingFunc._, fixedfunc.GLMatrixFunc._
     import mesh._
 
+    var gluQuad: GLUquadric = null
+
     class RichGL (val gl: GL2) {
-      def draw(t: Triangle) { for (v <- t.vertices) draw(v) }
-      def draw(e: Edge) { for (v <- e.vertices) draw(v) }
-      def draw(v: Vertex) { draw(v.location) }
-      def draw(p: Vec) { gl glVertex3f(p.x, p.y, p.z) }
+
+      def degrees(a: Float): Float = (a * 180 / math.Pi).toFloat
+
+      def translate(a: Vec) {
+        gl.glTranslatef(a.x, a.y, a.z)
+      }
+      def rotate(_a: Vec) {
+        val a = _a.unit
+        gl glRotatef( // https://github.com/curran/renderCyliner
+          degrees(math.acos(a dot xyz(0,0,1)).toFloat * (if (a.z < 0) -1 else 1)),
+          -1 * a.y * a.z, a.x * a.z, 0)
+      }
+
+      def setMaterial(m: Material) {
+        m set gl
+      }
+
+      def draw(t: Triangle) {
+        for (v <- t.vertices) draw(v)
+      }
+      def draw(v: Vertex) {
+        draw(v.location)
+      }
+      def draw(p: Vec) {
+        gl glVertex3f(p.x, p.y, p.z)
+      }
+
+      def draw(e: Edge) {
+        val a = e.locations(0)
+        val b = e.locations(1)
+        gl glPushMatrix()
+        translate(a)
+        rotate(b-a)
+        glu.gluCylinder(gluQuad, 0.0002, 0.0002, distance(a, b), 5, 5)
+        gl glPopMatrix()
+      }
+
     }
     implicit def richGL(gl: GL2) = new RichGL(gl)
 
@@ -114,25 +159,33 @@ class App {
 
       val gl:GL2 = (glDrawable getGL).getGL2
       camera set glDrawable
-      gl glClear GL_COLOR_BUFFER_BIT
+      gl glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
       faces(gl)
       frame(gl)
+
+      /*gl glPushMatrix()
+      gl glTranslatef (0, 0.05f, 0)
+      gl glRotatef (45,1,0,0)
+      gl glRotatef (45,0,1,0)
+      glu gluCylinder (gluQuad, 0.01, 0.01, 0.05, 5, 5)
+      gl glPopMatrix()*/
+
       gl glFlush()
     }
 
     def faces(gl:GL2) {
+
 
       import gl._
 
       glMatrixMode(GL_MODELVIEW)
       glLoadIdentity()
 
-      glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, colors.face)
-      glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, colors.face)
-      glMateriali(GL_FRONT_AND_BACK, GL_SHININESS, 4)
-
       glBegin(GL_TRIANGLES)
-      for (t <- triangles) gl draw t
+      gl setMaterial material.face(0)
+      for (t <- triangles) if (lrt contains t) gl draw t
+      gl setMaterial material.face(1)
+      for (t <- triangles) if (!(lrt contains t)) gl draw t
       glEnd()
     }
 
@@ -143,13 +196,8 @@ class App {
       glMatrixMode(GL_MODELVIEW)
       glLoadIdentity()
 
-      glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, colors.wire)
-      glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, colors.wire)
-      glMateriali(GL_FRONT_AND_BACK, GL_SHININESS, 0)
-
-      glBegin(GL_LINES)
+      gl setMaterial material.wire
       for (e <- mesh.edges) gl draw e
-      glEnd()
     }
 
     def dispose(p1: GLAutoDrawable) { }
@@ -159,7 +207,10 @@ class App {
       val gl = glDrawable getGL() getGL2()
       import gl._
 
+      gluQuad = glu.gluNewQuadric()
+
       glEnable(GL_BLEND)
+      glEnable(GL_DEPTH_TEST)
       glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
       glEnable(GL_LINE_SMOOTH)
       glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)

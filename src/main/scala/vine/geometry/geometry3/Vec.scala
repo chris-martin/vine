@@ -11,6 +11,11 @@ trait Vec extends Comparable[Vec] {
   def x: Float
   def y: Float
   def z: Float
+
+  def x(x: Float): Vec = xyz(x, y, z)
+  def y(y: Float): Vec = xyz(x, y, z)
+  def z(z: Float): Vec = xyz(x, y, z)
+
   def mag: Float
   def magSquared: Float
   def mag(newMag: Float): Vec = unit * newMag

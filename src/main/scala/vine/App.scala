@@ -9,8 +9,10 @@ import javax.media.opengl.glu.{GLU,GLUquadric}
 class App {
 
   val mesh = Ply.parse(Ply.getClass.getResourceAsStream("bun_zipper_res3.ply"))
-  val bb = mesh.boundingBox
-  mesh.translate(midpoint(bb._1, bb._2).y(bb._1.y + 0.007f) * -1)
+  mesh.translate({
+    val bb = mesh.boundingBox
+    midpoint(bb._1, bb._2).y(bb._1.y + 0.007f) * -1
+  })
   println(mesh)
 
   var mark: Option[mesh.Corner] = None
@@ -20,8 +22,19 @@ class App {
   val lre = lrt.flatMap(t => t.undirectedEdges)
 
   val glu = new GLU
+
   val animator = new com.jogamp.opengl.util.FPSAnimator(canvas, 20)
-  val camera = new opengl.Camera(xyz(0, 1, 0), aToB(xyz(-0.5, 0.5, 2), xyz(0, 0.07, 0)), glu, canvas.getSize)
+
+  val camera = new opengl.Camera(
+    up = xyz(0, 1, 0),
+    view = aToB(
+      xyz(-0.5, 0.5, 2),
+      xyz(0, 0.07, 0)
+    ),
+    glu = glu,
+    dim = canvas.getSize
+  )
+
   val frame = new opengl.CanvasFrame(canvas, "Vine")
 
   object keyListener extends java.awt.event.KeyAdapter {
@@ -29,11 +42,8 @@ class App {
     import java.awt.event.KeyEvent, KeyEvent._
 
     override def keyReleased(e: KeyEvent) {
-      val step = camera.view.ab.mag(3)
       e.getKeyCode match {
         case VK_ESCAPE => stop()
-/*        case VK_S => camera.view -= step
-        case VK_W => camera.view += step*/
         case VK_M => mark = mark match {
           case Some(x) => None
           case None => mesh.triangles.headOption flatMap { t => t.corners.headOption }
@@ -82,10 +92,7 @@ class App {
   }
 
   frame.addWindowListener(new java.awt.event.WindowAdapter {
-
-    import java.awt.event.WindowEvent
-
-    override def windowClosing(e: WindowEvent) { stop() }
+    override def windowClosing(e: java.awt.event.WindowEvent) { stop() }
   })
 
   animator.start()

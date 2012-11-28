@@ -3,8 +3,9 @@ package vine
 import geometry.geometry3._
 import mesh.Ply
 
-import scala.collection.immutable
+import scala.collection.{mutable, immutable}
 import javax.media.opengl.glu.{GLU,GLUquadric}
+import scala.collection.mutable.ArrayBuffer
 
 class App {
 
@@ -17,13 +18,44 @@ class App {
 
   var mark: Option[mesh.Corner] = None
 
-  val lr = mesh.lr
-  val lrt = immutable.HashSet[mesh.Triangle](lr.flatMap(lr => lr.triangles):_*)
-  val lre = lrt.flatMap(t => t.undirectedEdges)
+  val lrs: Seq[mesh.LR] = mesh.lr
+  val lrTriangles = immutable.HashSet[mesh.Triangle](lrs.flatMap(lr => lr.triangles):_*)
+
+  val distanceFromGroup = {
+    import mesh._
+    def isUnderground(v: Vertex) = v.location.y < 0
+    for (lr <- lrs) {
+      var start = 0
+      while (!isUnderground(lr.cycle(i))) start += 1
+      val distances = for (step <- List(-1, 1)) {
+        var vIndex = start
+        var distance = 0
+        for (i <- 0 until lr.cycle.size) {
+          distance = if (isUnderground(lr.cycle(vIndex))) 0 else distance + 1
+
+          vIndex = (vIndex + i) % lr.cycle.size
+        }
+      }
+    }
+    val undergroundVertices = mesh.vertices.filter(v => ).toSeq
+    val steps = ArrayBuffer[mutable.HashSet[mesh.Vertex]]()
+    var i = 0
+    while (i != 0 && steps(i-1).nonEmpty) {
+      val previousStep = steps(i-1)
+      val currentStep = mutable.HashSet[mesh.DirectedEdge]()
+      steps.append(currentStep)
+      for (lr <- lrs) for (previousEdge <- previousStep) {
+        lr.cycle.
+      }
+      i += 1
+    }
+    distance
+  }
 
   val glu = new GLU
 
-  val animator = new com.jogamp.opengl.util.FPSAnimator(canvas, 20)
+  val fps = 20
+  val animator = new com.jogamp.opengl.util.FPSAnimator(canvas, fps)
 
   val camera = new opengl.Camera(
     up = xyz(0, 1, 0),
@@ -51,6 +83,7 @@ class App {
         case VK_N => mark = mark map { m => m.next }
         case VK_P => mark = mark map { m => m.prev }
         case VK_S => mark = mark map { m => m.swing getOrElse m }
+        case VK_V => renderer.vineAnimationStep = 0
         case _ =>
       }
     }
@@ -134,6 +167,8 @@ class App {
 
     var gluQuad: GLUquadric = null
 
+    var vineAnimationStep: Int = 0
+
     class RichGL (val gl: GL2) {
 
       def degrees(a: Float): Float = (a * 180 / math.Pi).toFloat
@@ -189,7 +224,14 @@ class App {
       drawFrame(gl)
       drawCycle(gl)
       drawMark(gl)
+      drawVine(gl)
       glFlush()
+    }
+
+    def drawVine(gl: GL2) {
+
+
+      vineAnimationStep += 1
     }
 
     def drawFloor(gl: GL2) {
@@ -221,9 +263,9 @@ class App {
       import gl._
       glBegin(GL_TRIANGLES)
       gl setMaterial material.face(0)
-      for (t <- triangles) if (lrt contains t) gl draw t
+      for (t <- triangles) if (lrTriangles contains t) gl draw t
       gl setMaterial material.face(1)
-      for (t <- triangles) if (!(lrt contains t)) gl draw t
+      for (t <- triangles) if (!(lrTriangles contains t)) gl draw t
       glEnd()
     }
 
@@ -234,10 +276,8 @@ class App {
 
     def drawCycle(gl:GL2) {
       gl setMaterial material.wire
-      for (lrc <- lr) {
-        for ((a,b) <- lrc.cycle.zip(lrc.cycle.slice(1, lrc.cycle.size))) {
-          gl drawEdge(a, b, 0.0007f)
-        }
+      for (lrc <- lrs; (a,b) <- lrc.cycle.zip(lrc.cycle.slice(1, lrc.cycle.size))) {
+        gl drawEdge(a, b, 0.0007f)
       }
     }
 

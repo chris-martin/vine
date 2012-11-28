@@ -57,7 +57,7 @@ abstract class Mesh {
 
   }
 
-  class DirectedEdge private[Mesh] (private val _a: Vertex, private val _b: Vertex) extends Edge {
+  class DirectedEdge (private val _a: Vertex, private val _b: Vertex) extends Edge {
 
     override def vertices = List(_a, _b)
     override def undirectedEdge = new UndirectedEdge(_a, _b)

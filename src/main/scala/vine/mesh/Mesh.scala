@@ -1,6 +1,7 @@
 package vine.mesh
 
-import collection.{immutable, mutable}
+import collection.mutable
+import vine.collection.CircularSet
 
 abstract class Mesh {
 
@@ -204,8 +205,8 @@ abstract class Mesh {
   implicit def vertexToLocation(vertex:Vertex): Location = vertex.location
   implicit def cornerToLocation(corner:Corner): Location = corner.vertex.location
 
-  class LR ( val triangles: immutable.HashSet[Triangle],
-             val cycle: immutable.Seq[Vertex] )
+  class LR ( val triangles: Iterable[Triangle],
+             val cycle: CircularSet[Vertex] )
 
   def lr: Seq[LR] = components.map(c => lr(c)).toSeq
   def lr(component: Component): LR = lr(component.head.corners.head)
@@ -215,7 +216,7 @@ abstract class Mesh {
     val selectedTriangles = new mutable.HashSet[Triangle]
     val visitedVertices = new mutable.HashSet[Vertex]
     val workCorners = (0 until 2).map(_ => new mutable.Queue[Corner]).toSeq
-    var cycle = new vine.collection.CircularSet[Vertex]
+    val cycle = new CircularSet[Vertex]
 
     def select(c: Corner) {
       selectedTriangles add c.triangle
@@ -237,10 +238,7 @@ abstract class Mesh {
         foreach(d => select(d))
     }
 
-    new LR(
-      immutable.HashSet(selectedTriangles.toSeq:_*),
-      immutable.Vector(cycle.toSeq:_*)
-    )
+    new LR(selectedTriangles, cycle)
   }
 
 }

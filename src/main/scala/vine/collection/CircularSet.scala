@@ -1,15 +1,21 @@
 package vine.collection
 
-import collection.mutable
+import collection.{immutable, mutable}
 
 class CircularSet[A] extends Iterable[A] {
 
   // a -> (a.prev, a.next)
   private val entries = new mutable.HashMap[A, Pair[A,A]]
 
-  sealed trait Direction
-  object Forward extends Direction
-  object Backward extends Direction
+  sealed trait Direction {
+    def pairEntry(pair: (A, A)): A
+  }
+  object Backward extends Direction {
+    override def pairEntry(pair: (A, A)) = pair._1
+  }
+  object Forward extends Direction {
+    override def pairEntry(pair: (A, A)) = pair._2
+  }
 
   private def link(prev: Option[A], curr: A, next: Option[A]) {
     entries.put(curr, (
@@ -68,29 +74,53 @@ class CircularSet[A] extends Iterable[A] {
 
   override def isEmpty: Boolean = size == 0
 
-  override def iterator: Iterator[A] =
-    if (isEmpty) Iterator.empty
-    else iterator(entries.head._1)
-
-  def iterator(start: A): Iterator[A] = new Iterator[A] {
-
-    private var _i = entries.size
-
-    private var _next: Option[A] = Some(start)
-
-    override def hasNext = _next.isDefined
-
-    override def next() = {
-      val x = _next.get
-      _i -= 1
-      _next =
-        if (_i == 0) None
-        else entries.get(x).map(y => y._2)
-      x
+  def distances(zero: A => Boolean): Map[A, Int] = {
+    val distances = mutable.HashMap[A, Int]()
+    for (
+      start <- find(zero);
+      direction <- List(Forward, Backward)
+    ) {
+      var distanceFromPreviousZero = 0
+      for (element <- iterator(start, direction)) {
+        if (zero(element)) {
+          distanceFromPreviousZero = 0
+        }
+        distances.put(element, distances.get(element) match {
+          case Some(x) => math.min(x, distanceFromPreviousZero)
+          case None => distanceFromPreviousZero
+        })
+        distanceFromPreviousZero += 1
+      }
     }
-
+    distances.toMap
   }
 
-  override def toString = "CircularSet of size %d".format(size)
+  private def arbitraryElement: Option[A] =
+    if (isEmpty) None else Some(entries.head._1)
+
+  override def iterator = iterator(Forward)
+
+  def iterator(direction: Direction): Iterator[A] =
+    arbitraryElement match {
+      case Some(a) => iterator(a, direction)
+      case None => Iterator.empty
+    }
+
+  def iterator(start: A, direction: Direction = Forward): Iterator[A] =
+    new Iterator[A] {
+      private var _i = entries.size
+      private var _next: Option[A] = Some(start)
+      override def hasNext = _next.isDefined
+      override def next() = {
+        val x = _next.get
+        _i -= 1
+        _next =
+          if (_i == 0) None
+          else entries.get(x).map(direction.pairEntry)
+        x
+      }
+    }
+
+  override def toString() = "CircularSet of size %d".format(size)
 
 }

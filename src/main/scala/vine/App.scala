@@ -4,8 +4,9 @@ import geometry.geometry3._
 import mesh.Ply
 
 import scala.collection.{mutable, immutable}
-import javax.media.opengl.glu.{GLU,GLUquadric}
+import javax.media.opengl.glu.{GLU, GLUquadric}
 import scala.collection.mutable.ArrayBuffer
+import vine.collection.{enrichMap, mergeMultimaps}
 
 class App {
 
@@ -21,36 +22,7 @@ class App {
   val lrs: Seq[mesh.LR] = mesh.lr
   val lrTriangles = immutable.HashSet[mesh.Triangle](lrs.flatMap(lr => lr.triangles):_*)
 
-  val distanceFromGroup = {
-    import mesh._
-    def isUnderground(v: Vertex) = v.location.y < 0
-    for (lr <- lrs) {
-      var start = 0
-      while (!isUnderground(lr.cycle(i))) start += 1
-      val distances = for (step <- List(-1, 1)) {
-        var vIndex = start
-        var distance = 0
-        for (i <- 0 until lr.cycle.size) {
-          distance = if (isUnderground(lr.cycle(vIndex))) 0 else distance + 1
-
-          vIndex = (vIndex + i) % lr.cycle.size
-        }
-      }
-    }
-    val undergroundVertices = mesh.vertices.filter(v => ).toSeq
-    val steps = ArrayBuffer[mutable.HashSet[mesh.Vertex]]()
-    var i = 0
-    while (i != 0 && steps(i-1).nonEmpty) {
-      val previousStep = steps(i-1)
-      val currentStep = mutable.HashSet[mesh.DirectedEdge]()
-      steps.append(currentStep)
-      for (lr <- lrs) for (previousEdge <- previousStep) {
-        lr.cycle.
-      }
-      i += 1
-    }
-    distance
-  }
+  val verticesByDistanceFromGround = mergeMultimaps[Int, mesh.Vertex](lrs.map(_.cycle.distances(v => v.location.y < 0).invert):_*)
 
   val glu = new GLU
 

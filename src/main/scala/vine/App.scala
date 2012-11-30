@@ -3,10 +3,9 @@ package vine
 import geometry.geometry3._
 import mesh.Ply
 
-import scala.collection.{mutable, immutable}
+import scala.collection.immutable
 import javax.media.opengl.glu.{GLU, GLUquadric}
-import scala.collection.mutable.ArrayBuffer
-import vine.collection.{enrichMap, mergeMultimaps}
+import vine.collection.{enrichMap, mergeMultiMaps}
 
 class App {
 
@@ -22,7 +21,8 @@ class App {
   val lrs: Seq[mesh.LR] = mesh.lr
   val lrTriangles = immutable.HashSet[mesh.Triangle](lrs.flatMap(lr => lr.triangles):_*)
 
-  val verticesByDistanceFromGround = mergeMultimaps[Int, mesh.Vertex](lrs.map(_.cycle.distances(v => v.location.y < 0).invert):_*)
+  val verticesByDistanceFromGround = mergeMultiMaps(
+    lrs.map(_.cycle.distances(v => v.location.y < 0).invert))
 
   val glu = new GLU
 
@@ -132,7 +132,7 @@ class App {
 
     import vine.geometry.geometry3._
     import opengl._
-    import javax.media.opengl.{fixedfunc,GL2,GLAutoDrawable}
+    import javax.media.opengl.{GL2,GLAutoDrawable,fixedfunc}
     import javax.media.opengl.GL._, javax.media.opengl.GL2._
     import fixedfunc.GLLightingFunc._, fixedfunc.GLMatrixFunc._
     import mesh.{Vertex, Edge, Triangle, triangles, vertexToLocation, cornerToLocation}
@@ -143,18 +143,6 @@ class App {
 
     class RichGL (val gl: GL2) {
 
-      def degrees(a: Float): Float = (a * 180 / math.Pi).toFloat
-
-      def translate(a: Vec) {
-        gl.glTranslatef(a.x, a.y, a.z)
-      }
-      def rotate(_a: Vec) {
-        val a = _a.unit
-        gl glRotatef( // https://github.com/curran/renderCyliner
-          degrees(math.acos(a dot xyz(0,0,1)).toFloat * (if (a.z < 0) -1 else 1)),
-          -1 * a.y * a.z, a.x * a.z, 0)
-      }
-
       def setMaterial(m: Material) {
         m set gl
       }
@@ -162,20 +150,19 @@ class App {
       def draw(t: Triangle) {
         for (v <- t.vertices) draw(v)
       }
+
       def draw(v: Vertex) {
-        draw(v.location)
-      }
-      def draw(p: Vec) {
-        gl glVertex3f(p.x, p.y, p.z)
+        gl draw(v.location)
       }
 
       def draw(e: Edge) {
         drawEdge(e.locations(0), e.locations(1))
       }
+
       def drawEdge(a: Vec, b: Vec, thickness: Float = 0.0002f) {
         gl glPushMatrix()
-        translate(a)
-        rotate(b-a)
+        gl translate(a)
+        gl rotate(b-a)
         glu.gluCylinder(gluQuad, thickness, thickness, distance(a, b), 3, 3)
         gl glPopMatrix()
       }
@@ -192,18 +179,27 @@ class App {
       glMatrixMode(GL_MODELVIEW)
       glLoadIdentity()
       drawFloor(gl)
-      drawFaces(gl)
+      //drawFaces(gl)
       drawFrame(gl)
       drawCycle(gl)
-      drawMark(gl)
+      //drawMark(gl)
       drawVine(gl)
       glFlush()
     }
 
     def drawVine(gl: GL2) {
-
-
+      gl setMaterial new DefaultMaterial(color.red)
       vineAnimationStep += 1
+      for (distance <- 0 until (vineAnimationStep * 1f).toInt) {
+        if (verticesByDistanceFromGround.size > distance) {
+          for (vertex <- verticesByDistanceFromGround(distance)) {
+            gl glPushMatrix()
+            gl translate vertex.location
+            glu.gluSphere(gluQuad, 0.002f, 4, 4)
+            gl glPopMatrix()
+          }
+        }
+      }
     }
 
     def drawFloor(gl: GL2) {

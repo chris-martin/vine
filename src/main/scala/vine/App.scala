@@ -20,9 +20,14 @@ class App {
 
   val lrs: Seq[mesh.LR] = mesh.lr
   val lrTriangles = immutable.HashSet[mesh.Triangle](lrs.flatMap(lr => lr.triangles):_*)
-  val vineVertices: Seq[Seq[mesh.Vertex]] = lrs.
-    flatMap(_.cycle.split(v => v.location.y < 0)).
-    flatMap(seq => List(seq.slice(0, seq.size / 2), seq.reverse.slice(0, (seq.size + 1) / 2)))
+  val vineVertices: Seq[Seq[mesh.Vertex]] = (
+    lrs
+      .flatMap(_.cycle.split(v => v.location.y < 0))
+      .flatMap(seq => List(
+        seq.slice(0, seq.size / 2),
+        seq.reverse.slice(0, (seq.size + 1) / 2)
+      ))
+  )
 
   val glu = new GLU
 
@@ -120,10 +125,11 @@ class App {
     import vine.color
     import opengl.DefaultMaterial
 
-    val face = List(
+    val cycleFace = List(
       new DefaultMaterial(color.parse("#e73")),
       new DefaultMaterial(color.parse("#fdc"))
     )
+    val face = new DefaultMaterial(color.parse("#eeee"))
     val wire = new DefaultMaterial(color.parse("#000c"))
     val floor = new DefaultMaterial(color.parse("#5e2612"))
   }
@@ -179,22 +185,22 @@ class App {
       glMatrixMode(GL_MODELVIEW)
       glLoadIdentity()
       drawFloor(gl)
-      //drawFaces(gl)
-      drawFrame(gl)
-      drawCycle(gl)
+      drawFaces(gl)
+      //drawFrame(gl)
+      //drawCycle(gl)
       //drawMark(gl)
       drawVine(gl)
       glFlush()
     }
 
     def drawVine(gl: GL2) {
-      gl setMaterial new DefaultMaterial(color.red)
+      gl setMaterial new DefaultMaterial(color.parse("#092"))
       vineAnimationStep += 1
-      for (v <- vineVertices.flatMap(seq => seq.slice(0, (vineAnimationStep * 1f).toInt))) {
-        gl glPushMatrix()
-        gl translate v.location
-        glu.gluSphere(gluQuad, 0.002f, 4, 4)
-        gl glPopMatrix()
+      for (seq <- vineVertices) {
+        val slice = seq.slice(0, (vineAnimationStep * 1f).toInt)
+        for ((a, b) <- slice.zip(slice.drop(1))) {
+          gl drawEdge(a, b, 0.0012f)
+        }
       }
     }
 
@@ -226,9 +232,17 @@ class App {
     def drawFaces(gl:GL2) {
       import gl._
       glBegin(GL_TRIANGLES)
-      gl setMaterial material.face(0)
+      gl setMaterial material.face
+      for (t <- triangles) gl draw t
+      glEnd()
+    }
+
+    def drawCycleFaces(gl:GL2) {
+      import gl._
+      glBegin(GL_TRIANGLES)
+      gl setMaterial material.cycleFace(0)
       for (t <- triangles) if (lrTriangles contains t) gl draw t
-      gl setMaterial material.face(1)
+      gl setMaterial material.cycleFace(1)
       for (t <- triangles) if (!(lrTriangles contains t)) gl draw t
       glEnd()
     }

@@ -11,7 +11,7 @@ trait Color {
   def toFloatBuffer = java.nio.FloatBuffer.wrap(toArray)
 
   def withAlpha(a: Float) = new RGBA(r, g, b, a)
-  def transparent = this withAlpha 0
+  def transparent: Color = this withAlpha 0
 
   override def equals(obj: Any): Boolean = {
     if (!obj.isInstanceOf[Color]) return false

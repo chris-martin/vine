@@ -2,6 +2,7 @@ package vine.opengl
 
 import javax.media.opengl.GL2
 import vine.geometry.geometry3._
+import vine.color.Color
 
 class RichGL2(val gl: GL2) {
 
@@ -20,6 +21,10 @@ class RichGL2(val gl: GL2) {
 
   def draw(p: Vec) {
     gl glVertex3f(p.x, p.y, p.z)
+  }
+
+  def clearColor(c: Color) {
+    gl glClearColor(c.r, c.g, c.b, c.a)
   }
 
 }

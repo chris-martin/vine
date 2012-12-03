@@ -5,7 +5,6 @@ import mesh.Ply
 
 import scala.collection.immutable
 import javax.media.opengl.glu.{GLU, GLUquadric}
-import vine.collection.{enrichMap, mergeMultiMaps}
 
 class App {
 
@@ -129,9 +128,9 @@ class App {
       new DefaultMaterial(color.parse("#e73")),
       new DefaultMaterial(color.parse("#fdc"))
     )
-    val face = new DefaultMaterial(color.parse("#eeee"))
+    val face = new DefaultMaterial(color.parse("#bbb"))
     val wire = new DefaultMaterial(color.parse("#000c"))
-    val floor = new DefaultMaterial(color.parse("#5e2612"))
+    val floor = new DefaultMaterial(color.parse("#ce8632"))
   }
 
   object renderer extends javax.media.opengl.GLEventListener {
@@ -230,11 +229,10 @@ class App {
     }
 
     def drawFaces(gl:GL2) {
-      import gl._
-      glBegin(GL_TRIANGLES)
+      gl glBegin(GL_TRIANGLES)
       gl setMaterial material.face
       for (t <- triangles) gl draw t
-      glEnd()
+      gl glEnd()
     }
 
     def drawCycleFaces(gl:GL2) {
@@ -273,14 +271,15 @@ class App {
       glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
       glEnable(GL_LINE_SMOOTH)
       glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
-      glClearColor(0.5f, 0.65f, 0.8f, 0)
+      gl clearColor(color.parse("#68c"))
 
       glEnable(GL_LIGHTING)
       glEnable(GL_LIGHT0)
       glLightModeli(GL_LIGHT_MODEL_LOCAL_VIEWER, GL_TRUE)
-      glLightfv(GL_LIGHT0, GL_AMBIENT, Array(0.2f, 0.2f, 0.2f, 1f), 0)
-      glLightfv(GL_LIGHT0, GL_DIFFUSE, Array(1f, 1f, 1f, 1f), 0)
-      glLightfv(GL_LIGHT0, GL_POSITION, Array(10f, 10, 10, 1), 0)
+      glLightfv(GL_LIGHT0, GL_AMBIENT, Array(0, 0, 0, 1f), 0)
+      glLightfv(GL_LIGHT0, GL_DIFFUSE, Array(1, 1, 1, 1f), 0)
+      glLightfv(GL_LIGHT0, GL_SPECULAR, Array(1f, 1f, 1f, 1f), 0)
+      glLightfv(GL_LIGHT0, GL_POSITION, Array(1, 2, 2, 0f), 0)
     }
 
     def reshape(glDrawable: GLAutoDrawable, x: Int, y: Int, width: Int, height: Int) { }

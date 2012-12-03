@@ -1,5 +1,6 @@
 package vine
 
+import collection.Forest
 import geometry.geometry3._
 import mesh.Ply
 
@@ -19,9 +20,12 @@ class App {
 
   val lrs: Seq[mesh.LR] = mesh.lr
   val lrTriangles = immutable.HashSet[mesh.Triangle](lrs.flatMap(lr => lr.triangles):_*)
+  val vineTriangles: Forest[mesh.Triangle] = Forest.join(
+    lrs.map(_.triangles.toTree(_.corners.head.vertex.location.y < 0))
+  )
   val vineVertices: Seq[Seq[mesh.Vertex]] = (
     lrs
-      .flatMap(_.cycle.split(v => v.location.y < 0))
+      .flatMap(_.cycle.split(_.location.y < 0))
       .flatMap(seq => List(
         seq.slice(0, seq.size / 2),
         seq.reverse.slice(0, (seq.size + 1) / 2)

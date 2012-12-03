@@ -1,7 +1,7 @@
 package vine.mesh
 
 import collection.mutable
-import vine.collection.CircularSet
+import vine.collection.{UndirectedAcyclicGraph, CircularSet}
 
 abstract class Mesh {
 
@@ -205,7 +205,7 @@ abstract class Mesh {
   implicit def vertexToLocation(vertex:Vertex): Location = vertex.location
   implicit def cornerToLocation(corner:Corner): Location = corner.vertex.location
 
-  class LR ( val triangles: Iterable[Triangle],
+  class LR ( val triangles: UndirectedAcyclicGraph[Triangle],
              val cycle: CircularSet[Vertex] )
 
   def lr: Seq[LR] = components.map(c => lr(c)).toSeq
@@ -213,17 +213,18 @@ abstract class Mesh {
 
   def lr(firstCorner: Corner): LR = {
 
-    val selectedTriangles = new mutable.HashSet[Triangle]
+    val selectedTriangles = new UndirectedAcyclicGraph[Triangle]
     val visitedVertices = new mutable.HashSet[Vertex]
     val workCorners = (0 until 2).map(_ => new mutable.Queue[Corner]).toSeq
     val cycle = new CircularSet[Vertex]
 
     def select(c: Corner) {
-      selectedTriangles add c.triangle
       visitedVertices add c.vertex
       cycle insert (c.prev.vertex, c.vertex, c.next.vertex)
       workCorners(0) enqueue c.next
       workCorners(1) enqueue c.prev
+      selectedTriangles add c.triangle
+      c.opposite foreach { o => selectedTriangles.link(c.triangle, o.triangle) }
     }
 
     workCorners(0) enqueue firstCorner
@@ -232,10 +233,12 @@ abstract class Mesh {
     visitedVertices add firstCorner.prev.vertex
 
     while (workCorners.exists(q => q.nonEmpty)) {
-      workCorners(if (workCorners(0).nonEmpty) 0 else 1).
-        dequeue().opposite.
-        filterNot(d => visitedVertices contains d.vertex).
-        foreach(d => select(d))
+      (
+        workCorners(if (workCorners(0).nonEmpty) 0 else 1)
+          .dequeue().opposite
+          .filterNot(visitedVertices contains _.vertex)
+          .foreach(select(_))
+      )
     }
 
     new LR(selectedTriangles, cycle)

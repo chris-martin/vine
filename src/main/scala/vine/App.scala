@@ -20,9 +20,9 @@ class App {
 
   val lrs: Seq[mesh.LR] = mesh.lr
   val lrTriangles = immutable.HashSet[mesh.Triangle](lrs.flatMap(lr => lr.triangles):_*)
-
-  val verticesByDistanceFromGround = mergeMultiMaps(
-    lrs.map(_.cycle.distances(v => v.location.y < 0).invert))
+  val vineVertices: Seq[Seq[mesh.Vertex]] = lrs.
+    flatMap(_.cycle.split(v => v.location.y < 0)).
+    flatMap(seq => List(seq.slice(0, seq.size / 2), seq.reverse.slice(0, (seq.size + 1) / 2)))
 
   val glu = new GLU
 
@@ -190,15 +190,11 @@ class App {
     def drawVine(gl: GL2) {
       gl setMaterial new DefaultMaterial(color.red)
       vineAnimationStep += 1
-      for (distance <- 0 until (vineAnimationStep * 1f).toInt) {
-        if (verticesByDistanceFromGround.size > distance) {
-          for (vertex <- verticesByDistanceFromGround(distance)) {
-            gl glPushMatrix()
-            gl translate vertex.location
-            glu.gluSphere(gluQuad, 0.002f, 4, 4)
-            gl glPopMatrix()
-          }
-        }
+      for (v <- vineVertices.flatMap(seq => seq.slice(0, (vineAnimationStep * 1f).toInt))) {
+        gl glPushMatrix()
+        gl translate v.location
+        glu.gluSphere(gluQuad, 0.002f, 4, 4)
+        gl glPopMatrix()
       }
     }
 

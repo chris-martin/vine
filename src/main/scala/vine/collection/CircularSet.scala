@@ -1,6 +1,6 @@
 package vine.collection
 
-import collection.{immutable, mutable}
+import collection.mutable
 
 class CircularSet[A] extends Iterable[A] {
 
@@ -16,6 +16,9 @@ class CircularSet[A] extends Iterable[A] {
   object Forward extends Direction {
     override def pairEntry(pair: (A, A)) = pair._2
   }
+
+  private def prev(a: A): A = Backward.pairEntry(entries.get(a).get)
+  private def next(a: A): A = Forward.pairEntry(entries.get(a).get)
 
   private def link(prev: Option[A], curr: A, next: Option[A]) {
     entries.put(curr, (
@@ -73,6 +76,22 @@ class CircularSet[A] extends Iterable[A] {
   override def size: Int = entries.size
 
   override def isEmpty: Boolean = size == 0
+
+  def split(on: A => Boolean): Seq[Seq[A]] = {
+
+    val pieces = mutable.ArrayBuffer[mutable.ArrayBuffer[A]]()
+    def append(a: A) { pieces.last.append(a) }
+    def newPiece(a: A) { pieces.append(mutable.ArrayBuffer()); append(a) }
+
+    for (start <- find(on)) {
+      newPiece(start)
+      for ((a, b) <- iterator(start).zip(iterator(next(start)))) {
+        if (!on(a) || !on(b)) append(b)
+        if (on(b) && b != start) newPiece(b)
+      }
+    }
+    pieces.toSeq
+  }
 
   def distances(zero: A => Boolean): Map[A, Int] = {
     val distances = mutable.HashMap[A, Int]()

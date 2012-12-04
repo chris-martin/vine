@@ -6,6 +6,10 @@ import mesh.Ply
 
 import scala.collection.immutable
 import javax.media.opengl.glu.{GLU, GLUquadric}
+import java.awt.image.BufferedImage
+import com.jogamp.opengl.util.awt.Screenshot
+import java.io.File
+import javax.imageio.ImageIO
 
 class App {
 
@@ -245,6 +249,15 @@ class App {
       drawLrTriangleVine(gl)
       glFlush()
       if (isAnimating) vineAnimationStep += 1
+      //screenshot()
+    }
+
+    var screenshotId = 0
+    def screenshot() {
+      val image = Screenshot.readToBufferedImage(0,0, canvas.getSize.width, canvas.getSize.height, false)
+      val file: File = new File("/tmp/%d".format(screenshotId))
+      ImageIO.write(image, "png", file)
+      screenshotId += 1
     }
 
     def drawLrCycleVine(gl: GL2) {

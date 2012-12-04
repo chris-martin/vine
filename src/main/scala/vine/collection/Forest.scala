@@ -50,7 +50,10 @@ class Forest[A] extends Iterable[A] {
   }
 
   def roots: Iterable[A] =
-    all filterNot { a => childToParent contains a }
+    all filterNot { childToParent contains _ }
+
+  def leaves: Iterable[A] =
+    all filter { childrenOf(_).isEmpty }
 
   def ++=(o: Forest[A]) {
     all ++= o.all
@@ -122,6 +125,32 @@ class Forest[A] extends Iterable[A] {
     }
     edges
   }
+
+  def subtreeDepths: Map[A, Int] = {
+
+    val depths = new mutable.HashMap[A, Int]()
+
+    var nextLevel = mutable.HashSet[A]() ++ leaves
+    var nextLevelNumber = 0
+
+    while (nextLevel.nonEmpty) {
+
+      val currentLevel = nextLevel
+      val currentLevelNumber = nextLevelNumber
+
+      nextLevelNumber += 1
+      nextLevel = new mutable.HashSet[A]()
+
+      for (x <- currentLevel) {
+        depths(x) = currentLevelNumber
+        for (parent <- parentOf(x)) {
+          nextLevel add parent
+        }
+      }
+    }
+    depths.toMap
+  }
+
 }
 
 object Forest {
@@ -142,7 +171,7 @@ object Forest {
   }
 
   class TupleEdgeConstructor[A] extends EdgeConstructor[A, (A, A)] {
-    def apply(a1: A, a2: A) = (a1, a2)
+    def apply(a1: A, a2: A): (A, A) = ((a1, a2))
   }
 
 }

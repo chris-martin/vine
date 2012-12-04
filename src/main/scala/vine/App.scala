@@ -25,9 +25,12 @@ class App {
       component.flatMap(_.corners).find(_.vertex.location.y < 0).get
   )
   val lrTriangles = immutable.HashSet[Triangle](lrs.flatMap(lr => lr.triangles):_*)
+
   val vineTriangleTree: Forest[Triangle] = Forest.join(
     lrs.map(_.triangles.toTree(_.corners.head.vertex.location.y < 0))
   )
+
+  val subtreeDepths = vineTriangleTree.subtreeDepths
 
   case class TrianglePair (_1: Triangle, _2: Triangle) extends Forest.Edge[Triangle] {
     override def edgePoint1 = _1
@@ -49,6 +52,8 @@ class App {
     override def apply(a1: Triangle, a2: Triangle): TrianglePair = new TrianglePair(a1, a2)
   }
 
+  val vineTrianglePairTree: Forest[TrianglePair] = vineTriangleTree.edges(TrianglePairConstructor)
+
   case class TriangleTrio (_1: Triangle, _2: Triangle, _3: Triangle) extends Forest.Edge[TrianglePair] {
     override def edgePoint1 = TrianglePair(_1, _2)
     override def edgePoint2 = TrianglePair(_2, _3)
@@ -60,14 +65,10 @@ class App {
       new TriangleTrio(a1.edgePoint1, a1.edgePoint2, a2.edgePoint2)
   }
 
-  val vineTrianglePairTree: Forest[TrianglePair] = vineTriangleTree.edges(TrianglePairConstructor)
   val vineTriangleTrioTree: Forest[TriangleTrio] = vineTrianglePairTree.edges(TriangleTrioConstructor)
-  println(lrTriangles.size)
-  println(vineTriangleTree.size)
-  println(vineTrianglePairTree.size)
-  println(vineTriangleTrioTree.size)
+
   vineTriangleTrioTree.remove((trio: TriangleTrio) => trio.isUnderground)
-  println(vineTriangleTrioTree.size)
+
   val vineTriangleDepths: Seq[Iterable[TriangleTrio]] = vineTriangleTrioTree.layers
   val vineVertices: Seq[Seq[Vertex]] = (
     lrs
@@ -235,8 +236,8 @@ class App {
       glMatrixMode(GL_MODELVIEW)
       glLoadIdentity()
       drawFloor(gl)
-      //drawFaces(gl)
-      drawCycleFaces(gl)
+      drawFaces(gl)
+      //drawCycleFaces(gl)
       //drawFrame(gl)
       //drawCycle(gl)
       //drawMark(gl)
@@ -262,12 +263,12 @@ class App {
       if (isAnimating && maxDepth > vineTriangleDepths.size) isAnimating = false
       for (depth <- 0 until math.min(maxDepth, vineTriangleDepths.size)) {
         for (trio: TriangleTrio <- vineTriangleDepths(depth)) {
-          gl.drawEdge(
-            trio.edgePoint1.joinPoint,
-            trio.edgePoint2.joinPoint,
-            thickness = 0.0004f + 0.0020f * (maxDepth - depth) / maxDepth.toFloat,
-            extraLength = 0.0008f
-          )
+          var thickness = 0.0008f
+          thickness += 0.0003f * FastAtan(subtreeDepths(trio._3) - 10).toFloat
+          thickness += 0.0003f * FastAtan(maxDepth - depth).toFloat
+          thickness *= maxDepth / vineTriangleDepths.size.toFloat
+          gl.drawEdge(trio.edgePoint1.joinPoint, trio.edgePoint2.joinPoint,
+            thickness = thickness, extraLength = 0.0008f)
         }
       }
     }
@@ -355,6 +356,12 @@ class App {
 
   }
 
+}
+
+object FastAtan {
+  val values: Seq[Float] = for (i <- 0 until 5000) yield { math.atan(i / 1000).toFloat }
+  def apply(x: Float): Float = (if (x < 0) -1 else 1) *
+    (if (math.abs(x) > 5) 1 else values((math.abs(x).toInt / 1000)))
 }
 
 object Main {

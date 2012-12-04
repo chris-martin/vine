@@ -175,16 +175,18 @@ class App {
         drawEdge(e.locations(0), e.locations(1))
       }
 
-      def drawEdge(a: Vec, b: Vec, thickness: Float = 0.0002f) {
+      def drawEdge(a: Vec, b: Vec, thickness: Float = 0.0002f, extraLength: Float = 0) {
         gl glPushMatrix()
-        gl translate(a)
-        gl rotate(b-a)
-        glu.gluCylinder(gluQuad, thickness, thickness, distance(a, b), 3, 3)
+        gl translate(a subY extraLength/2)
+        gl rotate(b - a)
+        glu.gluCylinder(gluQuad, thickness, thickness, distance(a, b) + extraLength, 3, 1)
         gl glPopMatrix()
       }
 
     }
     implicit def richGL(gl: GL2) = new RichGL(gl)
+
+    var isAnimating = true
 
     def display(glDrawable: GLAutoDrawable) {
 
@@ -196,14 +198,14 @@ class App {
       glLoadIdentity()
       drawFloor(gl)
       //drawFaces(gl)
-      drawCycleFaces(gl)
+      //drawCycleFaces(gl)
       //drawFrame(gl)
       //drawCycle(gl)
       //drawMark(gl)
       //drawLrCycleVine(gl)
       drawLrTriangleVine(gl)
       glFlush()
-      vineAnimationStep += 1
+      if (isAnimating) vineAnimationStep += 1
     }
 
     def drawLrCycleVine(gl: GL2) {
@@ -218,14 +220,21 @@ class App {
 
     def drawLrTriangleVine(gl: GL2) {
       gl setMaterial new DefaultMaterial(color.parse("#092"))
-      val depth = (vineAnimationStep * 2f).toInt
+      val maxDepth = (vineAnimationStep * 2f).toInt
+      if (isAnimating && maxDepth > vineTriangleDepths.size) isAnimating = false
 
       def joinPoint(x: Triangle, y: Triangle): Vec = {
         val e = (x sharedEdges y).head
         midpoint(e.vertices(0), e.vertices(1))
       }
-      for (((a, b), (c, d)) <- vineTriangleDepths.slice(0, depth).flatten) {
-        gl drawEdge(joinPoint(a, b), joinPoint(c, d), 0.0012f)
+      for (depth <- 0 until math.min(maxDepth, vineTriangleDepths.size)) {
+        for (((a, b), (c, d)) <- vineTriangleDepths(depth)) {
+          gl.drawEdge(
+            joinPoint(a, b), joinPoint(c, d),
+            thickness = 0.0004f + 0.0020f * (maxDepth - depth) / maxDepth,
+            extraLength = 0.0008f
+          )
+        }
       }
     }
 

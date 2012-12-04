@@ -1,0 +1,14 @@
+cycle.png
+flip.png
+full.png
+mesh.png
+partial.png
+segment.png
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.log
+*.out
+*.pdf
+

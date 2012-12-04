@@ -1,0 +1,154 @@
+\documentclass{article}
+\usepackage{fullpage,abstract,hyperref,graphicx,caption}
+\usepackage{amsmath,amsfonts,amssymb,amsthm,program,float,multirow}
+\hypersetup{hidelinks}
+
+\makeatletter
+
+\newfloat{algorithm}{thp}{lop}
+\floatname{algorithm}{Algorithm}
+
+\title{\vspace{-60pt}CS 6491 - Project 4 - Triangle Mesh Vine}
+
+\author{
+\begin{tabular}{ll}
+\multirow{3}{*}{\includegraphics[scale=0.4]{chris.jpg}}\\&
+Christopher Martin\\&\texttt{chris.martin@gatech.edu}\end{tabular}
+~\\~\\~\\}
+
+\newcommand\screenshot[1]{\includegraphics[scale=0.15]{#1}}
+\newcommand{\argmin}{\operatornamewithlimits{argmin}}
+\newcommand{\argmax}{\operatornamewithlimits{argmax}}
+\def\p{\hspace{0pt}}
+
+\begin{document}
+
+\makeatletter
+\twocolumn[
+\begin{@twocolumnfalse}
+\maketitle
+
+\begin{abstract}
+
+This project uses Scala with JOGL to
+generate a tree over approximately half of the faces of
+a triangle manifold
+using a laced ring\cite{lr} construction,
+and then render an animation resembling
+a vine that grows upward along paths defined by the tree.
+
+\end{abstract}
+\end{@twocolumnfalse}
+]
+\makeatother
+
+\section{Mesh structure}
+
+The mesh is stored as a collection of components,
+where each component is a collection of triangles,
+and each triangle consists of three corners.
+The data comes from the Stanford Bunny\cite{bunny}
+read from a {\tt ply} file.
+Each new triangle $t$ added to the mesh initially
+belongs to its own new component.
+If it is adjacent to another triangle $u$,
+then the components of $t$ and $u$ are merged
+into a single component.
+When two components merge, one of them may have
+its triangles reversed to ensure consistent corner
+ordering among all of the triangles within each
+component (see Figure \ref{fig:flip}).
+
+\begin{figure}
+\centering
+\screenshot{mesh}
+\caption{Basic rendering with mesh edges drawn.}
+\end{figure}
+
+\begin{figure}
+\centering
+\screenshot{flip}
+\caption{When triangle C is added to this mesh,
+its component is merged with A and then with B.
+A and B already have compatible ordering.
+B and C, however, do not, indicated by the
+observation that their shared edges point in
+the same direction. This is resolved by reversing
+the order of the corners in C.}
+\label{fig:flip}
+\end{figure}
+
+\section{Triangle forest}
+
+The first task is to construct an undirected
+acyclic graph of triangles (rendered as the
+darker color in Figure \ref{fig:lr}).
+The graph is initialized with a triangle
+located near the bottom-center of the model
+space, and is subsequently expanded by conducting
+a traversal of the mesh, rejecting triangles
+that share any edges with a triangle already
+in the graph. A breadth-first strategy was chosen
+over depth-first to exhibit more vine-like behavior.
+
+\begin{figure}
+\centering
+\screenshot{cycle}
+\caption{Demonstration of LR result. The darker-colored
+surface indicates triangles that belong to the tree.
+The resulting psuedo-Hamiltonian cycle is drawn in black.}
+\label{fig:lr}
+\end{figure}
+
+The bunny is slightly sunken into the mud puddle
+so that its bottommost vertices are ``underground''.
+The triangle tree is split into a triangle directed forest,
+where the underground nodes are used as the tree roots.
+This ensures that all the vine segments sprouting from the
+ground do so simultaneously at the beginning of the animation.
+
+\section{Vine rendering}
+
+The vine itself is rendered by using {\tt gluCylinder}
+to construct each segment.
+See Figure \ref{fig:segment} for discussion of how
+segment endpoints are located.
+The thickness of each segment is manipulated to create
+a vine that is thicker at its roots and grows over time.
+Thickness is calculated as $($ $c_1$ $+$
+$c_2\; \text{atan($\alpha+c_3$)}$ $+$
+$c_4\; \text{atan($-\beta+c_5$)}$ $) t$,
+where the $c$ are constants,
+$\alpha$ is the maximum distance from the node to any
+leaf in the tree, $\beta$ is the distance from the node
+to the root of the tree, and $t$ is the time.
+
+\begin{figure}
+\centering
+\screenshot{segment}
+\caption{Segments of the vine are defined over
+triplets of consecutive triangles.
+For example, the sequence of triangles
+(ABC, BCD, CDE)
+corresponds to a vine segment from the midpoint
+of BC to the midpoint of CD.}
+\label{fig:segment}
+\end{figure}
+
+\begin{figure}
+\centering
+\screenshot{partial}
+\caption{In-progress animation.}
+\end{figure}
+
+\begin{figure}
+\centering
+\screenshot{full}
+\caption{Completed animation.}
+\end{figure}
+
+\bibliography{vine}{}
+\bibliographystyle{plain}
+
+\end{document}
+

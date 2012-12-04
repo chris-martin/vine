@@ -25,6 +25,7 @@ class UndirectedAcyclicGraph[A] extends Iterable[A] {
 
   def toTree(isRootCandidate: A => Boolean): Forest[A] = {
     val forest = new Forest[A]()
+    println("# " + size)
     for (root <- find(isRootCandidate)) {
       val work = new mutable.ArrayStack[A]()
       work push root
@@ -39,6 +40,7 @@ class UndirectedAcyclicGraph[A] extends Iterable[A] {
         }
       }
     }
+    println("# " + forest.size)
     forest
   }
 

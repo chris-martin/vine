@@ -19,7 +19,7 @@ class DefaultMaterial (val color: Color) extends Material {
     glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, color)
     glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, vine.color.white.toFloatBuffer)
     glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, vine.color.black.transparent.toFloatBuffer)
-    glMateriali(GL_FRONT_AND_BACK, GL_SHININESS, 2)
+    glMateriali(GL_FRONT_AND_BACK, GL_SHININESS, 8)
   }
 
 }

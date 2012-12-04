@@ -184,7 +184,14 @@ abstract class Mesh {
     def next: Corner = next(1)
     def prev: Corner = next(2)
     private def next(i: Int) = triangle.corners((triangle.corners.indexOf(this) + i) % 3)
-    def opposite: Option[Corner] = prev.swing.map(c => c.prev)
+
+    // todo Should be using this, but swing has proven unreliable:
+    // todo   def opposite: Option[Corner] = prev.swing.map(c => c.prev)
+    def opposite: Option[Corner] = {
+      val edge = new UndirectedEdge(prev.vertex, next.vertex)
+      val triangle: Option[Triangle] = findTriangles(edge).filterNot(_ == this.triangle).headOption
+      triangle flatMap (_.corners.filterNot(edge.vertices contains _.vertex).headOption)
+    }
     override def toString = "Corner of %s at %s".format(triangle, vertex)
   }
 
@@ -234,6 +241,9 @@ abstract class Mesh {
       workCorners enqueue c.next
       workCorners enqueue c.prev
       selectedTriangles add c.triangle
+      if (c.opposite.isDefined) {
+        assert(c.opposite.get.opposite.get == c)
+      }
       if (linkToOpposite) {
         for (o <- c.opposite) {
           selectedTriangles.link(c.triangle, o.triangle)

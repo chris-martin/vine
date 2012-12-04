@@ -2,6 +2,7 @@ package vine.collection
 
 import collection.mutable
 import collection.mutable.ArrayBuffer
+import vine.collection.Forest.EdgeConstructor
 
 class Forest[A] extends Iterable[A] {
 
@@ -30,6 +31,22 @@ class Forest[A] extends Iterable[A] {
     all add child
     childToParent(child) = parent
     parentToChildren addBinding (parent, child)
+  }
+
+  def remove(a: A) {
+    all -= a
+    for (child <- parentToChildren.get(a).flatten) childToParent -= child
+    parentToChildren -= a
+  }
+
+  def remove(as: Iterable[A]) {
+    for (a <- as) remove(a)
+  }
+
+  def remove(suchThat: A => Boolean) {
+    val as = new ArrayBuffer[A]()
+    for (a <- this) if (suchThat(a)) as.append(a)
+    remove(as)
   }
 
   def roots: Iterable[A] =
@@ -88,16 +105,18 @@ class Forest[A] extends Iterable[A] {
     subforest
   }
 
-  def edges: Forest[(A,A)] = {
-    val edges = new Forest[(A,A)]()
+  def edges[B <: Forest.Edge[A]](implicit makeEdge: EdgeConstructor[A, B]): Forest[B] = {
+    val edges = new Forest[B]()
     for (rootA <- roots; rootB <- childrenOf(rootA)) {
-      val work = new mutable.Stack[(A,A)]()
-      work push ((rootA, rootB))
+      val work = new mutable.Stack[B]()
+      work push makeEdge(rootA, rootB)
       while (work.nonEmpty) {
-        val (a, b) = work pop()
+        val ab = work pop()
+        val b = ab.edgePoint2
         for (c <- childrenOf(b)) {
-          work push ((b,c))
-          edges add ((a,b), (b,c))
+          val bc = makeEdge(b, c)
+          work push bc
+          edges add (ab, bc)
         }
       }
     }
@@ -111,6 +130,19 @@ object Forest {
     val joined = new Forest[A]()
     for (x <- xs) joined ++= x
     joined
+  }
+
+  trait Edge[A] {
+    def edgePoint1: A
+    def edgePoint2: A
+  }
+
+  trait EdgeConstructor[A, B] {
+    def apply(a1: A, a2: A): B
+  }
+
+  class TupleEdgeConstructor[A] extends EdgeConstructor[A, (A, A)] {
+    def apply(a1: A, a2: A) = (a1, a2)
   }
 
 }

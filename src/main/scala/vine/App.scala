@@ -1,6 +1,6 @@
 package vine
 
-import collection.Forest
+import vine.collection.Forest
 import geometry.geometry3._
 import mesh.Ply
 
@@ -10,27 +10,66 @@ import javax.media.opengl.glu.{GLU, GLUquadric}
 class App {
 
   val mesh = Ply.parse(Ply.getClass.getResourceAsStream("bun_zipper_res2.ply"))
+  import mesh.{Vertex, Edge, Component, Corner, LR, Triangle, triangles, vertexToLocation, cornerToLocation}
+
   mesh.translate({
     val bb = mesh.boundingBox
     midpoint(bb._1, bb._2).y(bb._1.y + 0.007f) * -1
   })
   println(mesh)
 
-  var mark: Option[mesh.Corner] = None
+  var mark: Option[Corner] = None
 
-  val lrs: Seq[mesh.LR] = mesh.lr(component => {
-    val bb = mesh.boundingBox
-    val basePoint = midpoint(bb._1, bb._2).y(bb._1.y)
-    component.corners.minBy(corner => distance(corner.vertex.location, basePoint))
-  })
-  val lrTriangles = immutable.HashSet[mesh.Triangle](lrs.flatMap(lr => lr.triangles):_*)
-  val vineTriangles: Forest[mesh.Triangle] = Forest.join(
+  val lrs: Seq[LR] = mesh.lr(
+    firstCorner = (component: Component) =>
+      component.flatMap(_.corners).find(_.vertex.location.y < 0).get
+  )
+  val lrTriangles = immutable.HashSet[Triangle](lrs.flatMap(lr => lr.triangles):_*)
+  val vineTriangleTree: Forest[Triangle] = Forest.join(
     lrs.map(_.triangles.toTree(_.corners.head.vertex.location.y < 0))
   )
-  val vineTriangleEdges: Forest[(mesh.Triangle, mesh.Triangle)] = vineTriangles.edges
-  val vineTriangleDepths: Seq[Iterable[((mesh.Triangle, mesh.Triangle), (mesh.Triangle, mesh.Triangle))]] =
-    vineTriangleEdges.edges.layers
-  val vineVertices: Seq[Seq[mesh.Vertex]] = (
+
+  case class TrianglePair (_1: Triangle, _2: Triangle) extends Forest.Edge[Triangle] {
+    override def edgePoint1 = _1
+    override def edgePoint2 = _2
+
+    private var _joinPoint: Option[Vec] = None
+    def joinPoint: Vec = _joinPoint match {
+      case Some(x) => x
+      case None => _joinPoint = Some({
+        val e = (_1 sharedEdges _2).head
+        midpoint(e.vertices(0), e.vertices(1))
+      }); _joinPoint.get
+    }
+
+    def isUnderground: Boolean = joinPoint.y < 0
+  }
+
+  object TrianglePairConstructor extends Forest.EdgeConstructor[Triangle, TrianglePair] {
+    override def apply(a1: Triangle, a2: Triangle): TrianglePair = new TrianglePair(a1, a2)
+  }
+
+  case class TriangleTrio (_1: Triangle, _2: Triangle, _3: Triangle) extends Forest.Edge[TrianglePair] {
+    override def edgePoint1 = TrianglePair(_1, _2)
+    override def edgePoint2 = TrianglePair(_2, _3)
+    def isUnderground: Boolean = edgePoint1.isUnderground && edgePoint2.isUnderground
+  }
+
+  object TriangleTrioConstructor extends Forest.EdgeConstructor[TrianglePair, TriangleTrio] {
+    override def apply(a1: TrianglePair, a2: TrianglePair): TriangleTrio =
+      new TriangleTrio(a1.edgePoint1, a1.edgePoint2, a2.edgePoint2)
+  }
+
+  val vineTrianglePairTree: Forest[TrianglePair] = vineTriangleTree.edges(TrianglePairConstructor)
+  val vineTriangleTrioTree: Forest[TriangleTrio] = vineTrianglePairTree.edges(TriangleTrioConstructor)
+  println(lrTriangles.size)
+  println(vineTriangleTree.size)
+  println(vineTrianglePairTree.size)
+  println(vineTriangleTrioTree.size)
+  vineTriangleTrioTree.remove((trio: TriangleTrio) => trio.isUnderground)
+  println(vineTriangleTrioTree.size)
+  val vineTriangleDepths: Seq[Iterable[TriangleTrio]] = vineTriangleTrioTree.layers
+  val vineVertices: Seq[Seq[Vertex]] = (
     lrs
       .flatMap(_.cycle.split(_.location.y < 0))
       .flatMap(seq => List(
@@ -151,7 +190,6 @@ class App {
     import javax.media.opengl.{GL2,GLAutoDrawable,fixedfunc}
     import javax.media.opengl.GL._, javax.media.opengl.GL2._
     import fixedfunc.GLLightingFunc._, fixedfunc.GLMatrixFunc._
-    import mesh.{Vertex, Edge, Triangle, triangles, vertexToLocation, cornerToLocation}
 
     var gluQuad: GLUquadric = null
 
@@ -198,7 +236,7 @@ class App {
       glLoadIdentity()
       drawFloor(gl)
       //drawFaces(gl)
-      //drawCycleFaces(gl)
+      drawCycleFaces(gl)
       //drawFrame(gl)
       //drawCycle(gl)
       //drawMark(gl)
@@ -222,16 +260,12 @@ class App {
       gl setMaterial new DefaultMaterial(color.parse("#092"))
       val maxDepth = (vineAnimationStep * 2f).toInt
       if (isAnimating && maxDepth > vineTriangleDepths.size) isAnimating = false
-
-      def joinPoint(x: Triangle, y: Triangle): Vec = {
-        val e = (x sharedEdges y).head
-        midpoint(e.vertices(0), e.vertices(1))
-      }
       for (depth <- 0 until math.min(maxDepth, vineTriangleDepths.size)) {
-        for (((a, b), (c, d)) <- vineTriangleDepths(depth)) {
+        for (trio: TriangleTrio <- vineTriangleDepths(depth)) {
           gl.drawEdge(
-            joinPoint(a, b), joinPoint(c, d),
-            thickness = 0.0004f + 0.0020f * (maxDepth - depth) / maxDepth,
+            trio.edgePoint1.joinPoint,
+            trio.edgePoint2.joinPoint,
+            thickness = 0.0004f + 0.0020f * (maxDepth - depth) / maxDepth.toFloat,
             extraLength = 0.0008f
           )
         }

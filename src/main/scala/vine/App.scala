@@ -111,6 +111,7 @@ class App {
         case VK_P => mark = mark map { m => m.prev }
         case VK_S => mark = mark map { m => m.swing getOrElse m }
         case VK_V => renderer.vineAnimationStep = 0
+        case VK_SPACE => renderer.vineAnimationStep = 0; renderer.isAnimating ^= true
         case _ =>
       }
     }
@@ -195,6 +196,7 @@ class App {
     var gluQuad: GLUquadric = null
 
     var vineAnimationStep: Int = 0
+    var isAnimating = false
 
     class RichGL (val gl: GL2) {
 
@@ -224,8 +226,6 @@ class App {
 
     }
     implicit def richGL(gl: GL2) = new RichGL(gl)
-
-    var isAnimating = true
 
     def display(glDrawable: GLAutoDrawable) {
 

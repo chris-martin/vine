@@ -79,6 +79,9 @@ abstract class Mesh {
 
     private val _triangles = new mutable.ArrayBuffer[Triangle]
     def iterator = _triangles.iterator
+
+    def corners: Iterable[Corner] = flatMap(_.corners)
+
     private[Mesh] def add(t: Triangle) { _triangles append t }
 
     private[Mesh] def reverse() { for (t <- this) t reverse() }
@@ -168,6 +171,9 @@ abstract class Mesh {
     def directedEdge(e: Edge): Option[DirectedEdge] =
       directedEdges.find(d => d.undirectedEdge == e.undirectedEdge)
 
+    def sharedEdges(o: Triangle): Iterable[UndirectedEdge] =
+      undirectedEdges.intersect(o.undirectedEdges)
+
     override def toString = "Triangle #%d".format(id)
 
   }
@@ -208,34 +214,41 @@ abstract class Mesh {
   class LR ( val triangles: UndirectedAcyclicGraph[Triangle],
              val cycle: CircularSet[Vertex] )
 
-  def lr: Seq[LR] = components.map(c => lr(c)).toSeq
-  def lr(component: Component): LR = lr(component.head.corners.head)
+  def arbitraryFirstCorner(component: Component) = component.head.corners.head
+
+  def lr(firstCorner: Component => Corner = arbitraryFirstCorner): Seq[LR] =
+    components.map(c => lr(firstCorner(c))).toSeq
+
+  def lr(component: Component): LR = lr(arbitraryFirstCorner(component))
 
   def lr(firstCorner: Corner): LR = {
 
     val selectedTriangles = new UndirectedAcyclicGraph[Triangle]
     val visitedVertices = new mutable.HashSet[Vertex]
-    val workCorners = (0 until 2).map(_ => new mutable.Queue[Corner]).toSeq
+    val workCorners = new mutable.Queue[Corner]
     val cycle = new CircularSet[Vertex]
 
-    def select(c: Corner) {
+    def select(c: Corner, linkToOpposite: Boolean = true) {
       visitedVertices add c.vertex
       cycle insert (c.prev.vertex, c.vertex, c.next.vertex)
-      workCorners(0) enqueue c.next
-      workCorners(1) enqueue c.prev
+      workCorners enqueue c.next
+      workCorners enqueue c.prev
       selectedTriangles add c.triangle
-      c.opposite foreach { o => selectedTriangles.link(c.triangle, o.triangle) }
+      if (linkToOpposite) {
+        for (o <- c.opposite) {
+          selectedTriangles.link(c.triangle, o.triangle)
+        }
+      }
     }
 
-    workCorners(0) enqueue firstCorner
-    select(firstCorner)
+    workCorners enqueue firstCorner
+    select(firstCorner, linkToOpposite = false)
     visitedVertices add firstCorner.next.vertex
     visitedVertices add firstCorner.prev.vertex
 
-    while (workCorners.exists(q => q.nonEmpty)) {
+    while (workCorners.nonEmpty) {
       (
-        workCorners(if (workCorners(0).nonEmpty) 0 else 1)
-          .dequeue().opposite
+        workCorners.dequeue().opposite
           .filterNot(visitedVertices contains _.vertex)
           .foreach(select(_))
       )

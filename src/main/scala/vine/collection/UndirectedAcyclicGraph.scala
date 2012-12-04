@@ -2,6 +2,11 @@ package vine.collection
 
 import collection.mutable
 
+/**
+ * Assumptions that we make but do NOT check in this class:
+ * - The graph is acyclic.
+ * - The graph is a single connected component,
+ */
 class UndirectedAcyclicGraph[A] extends Iterable[A] {
 
   private val adjacencies =
@@ -18,12 +23,12 @@ class UndirectedAcyclicGraph[A] extends Iterable[A] {
     adjacencies addBinding (b, a)
   }
 
-  def toTree(isRoot: A => Boolean): Forest[A] = {
+  def toTree(isRootCandidate: A => Boolean): Forest[A] = {
     val forest = new Forest[A]()
-    find(isRoot) foreach { root =>
+    for (root <- find(isRootCandidate)) {
       val work = new mutable.ArrayStack[A]()
       work push root
-      val visited = mutable.HashSet[A]()
+      val visited = mutable.HashSet[A](root)
       while (work.nonEmpty) {
         val a = work pop()
         forest add a

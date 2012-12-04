@@ -9,7 +9,7 @@ import javax.media.opengl.glu.{GLU, GLUquadric}
 
 class App {
 
-  val mesh = Ply.parse(Ply.getClass.getResourceAsStream("bun_zipper_res3.ply"))
+  val mesh = Ply.parse(Ply.getClass.getResourceAsStream("bun_zipper_res2.ply"))
   mesh.translate({
     val bb = mesh.boundingBox
     midpoint(bb._1, bb._2).y(bb._1.y + 0.007f) * -1
@@ -18,11 +18,19 @@ class App {
 
   var mark: Option[mesh.Corner] = None
 
-  val lrs: Seq[mesh.LR] = mesh.lr
+  val lrs: Seq[mesh.LR] = mesh.lr(component => {
+    val bb = mesh.boundingBox
+    val basePoint = midpoint(bb._1, bb._2).y(bb._1.y)
+    component.corners.minBy(corner => distance(corner.vertex.location, basePoint))
+  })
   val lrTriangles = immutable.HashSet[mesh.Triangle](lrs.flatMap(lr => lr.triangles):_*)
+  println(lrTriangles.size)
   val vineTriangles: Forest[mesh.Triangle] = Forest.join(
     lrs.map(_.triangles.toTree(_.corners.head.vertex.location.y < 0))
   )
+  println(vineTriangles.size)
+  val vineTriangleEdges: Forest[(mesh.Triangle, mesh.Triangle)] = vineTriangles.edges
+  println(vineTriangleEdges.size)
   val vineVertices: Seq[Seq[mesh.Vertex]] = (
     lrs
       .flatMap(_.cycle.split(_.location.y < 0))
@@ -188,22 +196,37 @@ class App {
       glMatrixMode(GL_MODELVIEW)
       glLoadIdentity()
       drawFloor(gl)
-      drawFaces(gl)
+      //drawFaces(gl)
+      drawCycleFaces(gl)
       //drawFrame(gl)
       //drawCycle(gl)
       //drawMark(gl)
-      drawVine(gl)
+      //drawLrCycleVine(gl)
+      drawLrTriangleVine(gl)
       glFlush()
+      vineAnimationStep += 1
     }
 
-    def drawVine(gl: GL2) {
+    def drawLrCycleVine(gl: GL2) {
       gl setMaterial new DefaultMaterial(color.parse("#092"))
-      vineAnimationStep += 1
       for (seq <- vineVertices) {
-        val slice = seq.slice(0, (vineAnimationStep * 1f).toInt)
+        val slice = seq.slice(0, (vineAnimationStep * 1.2f).toInt)
         for ((a, b) <- slice.zip(slice.drop(1))) {
           gl drawEdge(a, b, 0.0012f)
         }
+      }
+    }
+
+    def drawLrTriangleVine(gl: GL2) {
+      gl setMaterial new DefaultMaterial(color.parse("#092"))
+      val forestDepth = (vineAnimationStep * 2f).toInt
+      val subforest = vineTriangleEdges.subforestOfDepth(forestDepth)
+      def joinPoint(x: Triangle, y: Triangle): Vec = {
+        val e = (x sharedEdges y).head
+        midpoint(e.vertices(0), e.vertices(1))
+      }
+      for (((a, b), (c, d)) <- subforest.edges) {
+        gl drawEdge(joinPoint(a, b), joinPoint(c, d), 0.0012f)
       }
     }
 

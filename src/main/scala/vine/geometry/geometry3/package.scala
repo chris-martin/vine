@@ -144,4 +144,19 @@ package object geometry3 {
 
   def formatXYZ(v: Vec): String = "%f,%f,%f".format(v.x, v.y, v.z)
 
+  def boundingBox(ps: Iterable[Vec]): Pair[Vec, Vec] = {
+
+    import math.{min, max}
+
+    var a = xyzSeq(List.fill(3)(Float.MaxValue))
+    var b = xyzSeq(List.fill(3)(Float.MinValue))
+
+    for (p <- ps) {
+      a = xyz(min(a.x, p.x), min(a.y, p.y), min(a.z, p.z))
+      b = xyz(max(b.x, p.x), max(b.y, p.y), max(b.z, p.z))
+    }
+
+    (a, b)
+  }
+
 }

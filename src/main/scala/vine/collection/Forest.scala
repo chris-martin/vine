@@ -1,6 +1,7 @@
 package vine.collection
 
 import collection.mutable
+import collection.mutable.ArrayBuffer
 
 class Forest[A] extends Iterable[A] {
 
@@ -45,6 +46,28 @@ class Forest[A] extends Iterable[A] {
 
   def parentOf(child: A): Option[A] =
     childToParent.get(child)
+
+  def layers: Seq[Iterable[A]] = {
+    val layers = new ArrayBuffer[ArrayBuffer[A]]()
+    def setDepth(a: A, i: Int) {
+      while (layers.size < i + 1) {
+        layers.append(new ArrayBuffer[A]())
+      }
+      layers(i).append(a)
+    }
+    for (root <- roots) {
+      val work = new mutable.Stack[(A, Int)]()
+      work push ((root, 0))
+      while (work.nonEmpty) {
+        val (a, depth) = work pop()
+        setDepth(a, depth)
+        for (child <- childrenOf(a)) {
+          work push ((child, depth + 1))
+        }
+      }
+    }
+    layers
+  }
 
   def subforestOfDepth(maxDepth: Int): Forest[A] = {
     val subforest = new Forest[A]()

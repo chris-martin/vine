@@ -24,13 +24,12 @@ class App {
     component.corners.minBy(corner => distance(corner.vertex.location, basePoint))
   })
   val lrTriangles = immutable.HashSet[mesh.Triangle](lrs.flatMap(lr => lr.triangles):_*)
-  println(lrTriangles.size)
   val vineTriangles: Forest[mesh.Triangle] = Forest.join(
     lrs.map(_.triangles.toTree(_.corners.head.vertex.location.y < 0))
   )
-  println(vineTriangles.size)
   val vineTriangleEdges: Forest[(mesh.Triangle, mesh.Triangle)] = vineTriangles.edges
-  println(vineTriangleEdges.size)
+  val vineTriangleDepths: Seq[Iterable[((mesh.Triangle, mesh.Triangle), (mesh.Triangle, mesh.Triangle))]] =
+    vineTriangleEdges.edges.layers
   val vineVertices: Seq[Seq[mesh.Vertex]] = (
     lrs
       .flatMap(_.cycle.split(_.location.y < 0))
@@ -219,13 +218,13 @@ class App {
 
     def drawLrTriangleVine(gl: GL2) {
       gl setMaterial new DefaultMaterial(color.parse("#092"))
-      val forestDepth = (vineAnimationStep * 2f).toInt
-      val subforest = vineTriangleEdges.subforestOfDepth(forestDepth)
+      val depth = (vineAnimationStep * 2f).toInt
+
       def joinPoint(x: Triangle, y: Triangle): Vec = {
         val e = (x sharedEdges y).head
         midpoint(e.vertices(0), e.vertices(1))
       }
-      for (((a, b), (c, d)) <- subforest.edges) {
+      for (((a, b), (c, d)) <- vineTriangleDepths.slice(0, depth).flatten) {
         gl drawEdge(joinPoint(a, b), joinPoint(c, d), 0.0012f)
       }
     }
